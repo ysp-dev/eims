@@ -156,6 +156,7 @@ async function apiRequest(url, options = {}) {
   if (res.status === 401 && S.authenticated) {
     // 세션 만료: 인증 상태를 내리고 다시 잠금 화면을 띄운다
     S.authenticated = false;
+    sessionStorage.removeItem('eims_auth');
     openPasswordGate();
   }
   if (!res.ok) throw new Error(data.error || '요청 처리 중 오류가 발생했습니다.');
@@ -179,6 +180,7 @@ async function submitPasswordGate() {
   try {
     await apiRequest('/api/login', { method: 'POST', body: JSON.stringify({ password: val }) });
     S.authenticated = true;
+    sessionStorage.setItem('eims_auth', '1');
     await loadEmployees();
   } catch (e) {
     if (err) err.textContent = e.message;
@@ -1032,17 +1034,19 @@ function delegate(type) {
 // ═══════════════════════════════════════
 document.addEventListener('DOMContentLoaded', async () => {
   try {
-    const session = await apiRequest('/api/session');
-    if (session.authenticated) {
-      S.authenticated = true;
-      await loadEmployees();
-      activateScreen('dashboard');
-      return;
+    // sessionStorage는 새로고침엔 유지되고 탭/브라우저 종료 시 지워진다.
+    // → 같은 세션에서의 새로고침일 때만(continued) 서버 세션을 확인해 로그인 유지.
+    //   종료 후 재진입이면 continued가 없어 잠금 화면을 띄운다.
+    if (sessionStorage.getItem('eims_auth') === '1') {
+      const session = await apiRequest('/api/session');
+      if (session.authenticated) {
+        S.authenticated = true;
+        await loadEmployees();
+        activateScreen('dashboard');
+        return;
+      }
     }
+    sessionStorage.removeItem('eims_auth');
   } catch (_) {}
   openPasswordGate();
-});
-
-window.addEventListener('pagehide', () => {
-  if (S.authenticated) navigator.sendBeacon('/api/logout');
 });
