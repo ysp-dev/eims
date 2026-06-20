@@ -1,0 +1,14 @@
+# 개인정보(PII) — 절대 커밋 금지
+/data/
+employees.js
+employees.json
+
+# OS / 에디터 산출물
+.DS_Store
+**/.DS_Store
+
+# 의존성 / 로그 / 환경
+node_modules/
+*.log
+.env
+.env.*

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EIMS — 직원정보관리시스템</title>
+<link rel="stylesheet" href="libs/fonts.css">
+<link rel="stylesheet" href="style.css">
+<script src="libs/chart.umd.min.js"></script>
+</head>
+<body>
+<div id="app">
+
+<!-- ═══ SIDEBAR ═══ -->
+<aside id="sidebar">
+  <div class="sb-head">
+    <div class="logo-box">KB</div>
+    <div>
+      <div class="logo-title">EIMS</div>
+      <div class="logo-sub">직원정보관리시스템</div>
+    </div>
+  </div>
+  <nav class="sb-nav">
+    <button class="nav-btn active" data-screen="dashboard" onclick="navigate('dashboard')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      <span>대시보드</span>
+    </button>
+    <div class="nav-sec">직원 관리</div>
+    <button class="nav-btn" data-screen="emplist" onclick="navigate('emplist')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span>직원 목록</span>
+    </button>
+    <div class="nav-sec">현황 분석</div>
+    <button class="nav-btn" data-screen="dept" onclick="navigate('dept')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>팀별 현황</span>
+    </button>
+    <button class="nav-btn" data-screen="stats" onclick="navigate('stats')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <span>통계 분석</span>
+    </button>
+  </nav>
+</aside>
+
+<!-- ═══ MAIN ═══ -->
+<div id="main">
+  <header id="top-bar">
+    <div class="tb-left">
+      <h1 id="page-title">대시보드</h1>
+      <div class="tb-div"></div>
+      <span id="cur-date"></span>
+    </div>
+    <div class="tb-right"></div>
+  </header>
+
+  <div id="content">
+
+    <!-- ══ DASHBOARD ══ -->
+    <div id="screen-dashboard" class="screen active">
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-hd">
+            <span class="kpi-lbl">전체 직원</span>
+            <div class="kpi-ico" style="background:rgba(255,188,0,.1)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFBC00" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+          </div>
+          <div class="kpi-val"><span id="kpi-total"></span><span class="kpi-unit">명</span></div>
+          <div class="kpi-sub" id="kpi-depts"></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-hd">
+            <span class="kpi-lbl">평균 근속연수</span>
+            <div class="kpi-ico" style="background:rgba(244,102,0,.1)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F46600" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+          </div>
+          <div class="kpi-val" id="kpi-avg"></div>
+          <div class="kpi-sub">장기 근속 우수</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-hd">
+            <span class="kpi-lbl">성별 비율</span>
+            <div class="kpi-ico" style="background:rgba(91,155,213,.1)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5B9BD5" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            </div>
+          </div>
+          <div class="kpi-val" style="color:#5B9BD5"><span id="kpi-male-pct"></span><span class="kpi-unit">남</span></div>
+          <div class="kpi-sub">여성 <span id="kpi-female-pct"></span></div>
+        </div>
+        <div class="kpi-card alert">
+          <div class="kpi-hd">
+            <span class="kpi-lbl">임피 근접 (53세+)</span>
+            <div class="kpi-ico" style="background:rgba(244,102,0,.14)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F46600" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+          </div>
+          <div class="kpi-val" style="color:#F46600" id="kpi-retire"></div>
+          <div class="kpi-sub">인력 계획 검토 필요</div>
+        </div>
+      </div>
+
+      <div class="ch-grid-2">
+        <div class="ch-card"><div class="ch-title">팀별 인원 현황</div><div class="ch-sub">팀 기준 직원 분포</div><div style="height:185px;position:relative"><canvas id="c-dept"></canvas></div></div>
+        <div class="ch-card"><div class="ch-title">직급별 분포</div><div class="ch-sub">직급 기준 인원 현황</div><div style="height:185px;position:relative"><canvas id="c-grade"></canvas></div></div>
+      </div>
+      <div class="ch-grid-12">
+        <div class="ch-card"><div class="ch-title">성별 비율</div><div class="ch-sub">남성 / 여성 비율</div><div style="height:145px;position:relative"><canvas id="c-gender"></canvas></div></div>
+        <div class="ch-card"><div class="ch-title">연도별 입행 현황</div><div class="ch-sub">연도별 신규 입행 인원 추이</div><div style="height:145px;position:relative"><canvas id="c-join"></canvas></div></div>
+      </div>
+
+      <div class="tbl-wrap">
+        <div class="tbl-head-row">
+          <div>
+            <div style="font-size:12px;font-weight:600;color:#A0A0C0">최근 입행 직원</div>
+            <div style="font-size:11px;color:#6C6C90;margin-top:2px">입행일 기준 최근 5명</div>
+          </div>
+          <button class="view-all" onclick="navigate('emplist')">전체 보기 →</button>
+        </div>
+        <table><thead><tr><th>성명</th><th>팀</th><th>직급</th><th>입행일</th><th>근속기간</th></tr></thead>
+        <tbody id="recent-tbody"></tbody></table>
+      </div>
+    </div>
+
+    <!-- ══ EMPLOYEE LIST ══ -->
+    <div id="screen-emplist" class="screen">
+      <div class="filter-bar">
+        <div class="srch-wrap">
+          <svg class="srch-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#484860" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" class="srch-inp" id="srch" placeholder="이름, 직원번호, 부서, 팀 검색..." oninput="doFilter()">
+        </div>
+        <select class="flt-sel" id="flt-team" onchange="doFilter()">
+          <option value="all">전체 팀</option>
+          <option value="여신심사팀">여신심사팀</option>
+          <option value="여신업무팀">여신업무팀</option>
+          <option value="여신관리팀">여신관리팀</option>
+          <option value="상품/신용평가팀">상품/신용평가팀</option>
+          <option value="외환팀">외환팀</option>
+          <option value="PPR팀">PPR팀</option>
+        </select>
+        <select class="flt-sel" id="flt-grade" onchange="doFilter()">
+          <option value="all">전체 직급</option>
+          <option value="L4">L4</option>
+          <option value="L3">L3</option>
+          <option value="L2">L2</option>
+          <option value="L1">L1</option>
+          <option value="L3대우">L3대우</option>
+          <option value="L2대우">L2대우</option>
+          <option value="L1대우">L1대우</option>
+        </select>
+        <select class="flt-sel" id="flt-gender" onchange="doFilter()">
+          <option value="all">전체 성별</option>
+          <option value="남">남성</option>
+          <option value="여">여성</option>
+        </select>
+        <div class="flt-cnt">총 <span id="flt-count">0</span>명</div>
+        <button class="add-emp-btn" onclick="openAdd()" title="직원 추가">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+          직원 추가
+        </button>
+        <button class="edu-toggle-btn" id="edu-toggle-btn" onclick="toggleEduCols()">학력/기타 <span id="edu-toggle-icon">▶</span></button>
+        <div class="io-sep"></div>
+        <div class="io-group">
+          <button class="io-btn" onclick="downloadTemplate()" title="빈 양식 CSV 다운로드">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+            템플릿
+          </button>
+          <label class="io-btn" title="CSV 파일로 직원 데이터 가져오기">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+            가져오기
+            <input type="file" id="import-file" accept=".csv" style="display:none" onchange="importCSV(this)">
+          </label>
+          <button class="io-btn io-export" onclick="exportCSV()" title="현재 직원 데이터를 CSV로 내보내기">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+            내보내기
+          </button>
+        </div>
+      </div>
+      <div class="tbl-wrap full-tbl">
+        <div class="tbl-scroll">
+          <table id="emp-table" class="edu-hidden">
+            <thead><tr>
+              <th class="c">No</th><th>부서</th><th>팀</th><th>성명</th><th>직원번호</th>
+              <th>직위</th><th class="c">직급</th><th>호칭</th><th>입행일</th><th>근속기간</th>
+              <th class="c">출생년도</th><th class="c">나이(만)</th><th>생년월일</th><th class="c">성별</th>
+              <th>현직급승격일</th><th class="c">등급</th><th>현등급책정일</th><th>차기등급일</th>
+              <th class="edu-col">입행전학교명</th><th class="edu-col">입행전전공</th><th class="edu-col">입행후학교명</th><th class="edu-col">입행후전공</th><th class="edu-col">기타</th>
+              <th class="c">관리</th>
+            </tr></thead>
+            <tbody id="emp-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ EMPLOYEE DETAIL ══ -->
+    <div id="screen-detail" class="screen">
+      <button class="back-btn" onclick="navigate('emplist')">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        목록으로 돌아가기
+      </button>
+      <div class="det-hd" id="det-hd"></div>
+      <div class="det-grid" id="det-grid"></div>
+    </div>
+
+    <!-- ══ DEPARTMENT STATUS ══ -->
+    <div id="screen-dept" class="screen">
+      <div class="dept-grid" id="dept-cards"></div>
+      <div class="ch-card">
+        <div class="ch-title">팀별 직급 구성 비교</div>
+        <div class="ch-sub">팀별 직급 분포 현황</div>
+        <div style="height:250px;position:relative"><canvas id="c-dept-detail"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ══ STATISTICS ══ -->
+    <div id="screen-stats" class="screen">
+      <div class="stats-grid3">
+        <div class="stats-card">
+          <div class="stats-ico" style="background:rgba(255,188,0,.1)">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#FFBC00" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <div><div class="stats-lbl">전체 직원</div><div class="stats-val"><span id="st-total"></span><span class="stats-unit">명</span></div></div>
+        </div>
+        <div class="stats-card">
+          <div class="stats-ico" style="background:rgba(91,155,213,.1)">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#5B9BD5" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
+          </div>
+          <div><div class="stats-lbl">남성 직원</div><div class="stats-val" style="color:#5B9BD5"><span id="st-male"></span><span class="stats-unit" id="st-male-u"></span></div></div>
+        </div>
+        <div class="stats-card">
+          <div class="stats-ico" style="background:rgba(232,77,138,.1)">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#E84D8A" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
+          </div>
+          <div><div class="stats-lbl">여성 직원</div><div class="stats-val" style="color:#E84D8A"><span id="st-female"></span><span class="stats-unit" id="st-female-u"></span></div></div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:13px">
+        <div class="ch-card"><div class="ch-title">연령대 분포</div><div class="ch-sub">10년 단위 연령 구간</div><div style="height:200px;position:relative"><canvas id="c-age"></canvas></div></div>
+        <div class="ch-card"><div class="ch-title">근속연수 분포</div><div class="ch-sub">구간별 근속 인원</div><div style="height:200px;position:relative"><canvas id="c-tenure"></canvas></div></div>
+        <div class="ch-card"><div class="ch-title">등급 현황</div><div class="ch-sub">등급별 인원 현황</div><div style="height:200px;position:relative"><canvas id="c-level"></canvas></div></div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /app -->
+
+<div class="pw-modal" id="pw-modal" aria-hidden="true">
+  <div class="pw-card" role="dialog" aria-modal="true" aria-labelledby="pw-title">
+    <div class="pw-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFBC00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </div>
+    <div class="pw-title" id="pw-title">EIMS 보안 인증</div>
+    <div class="pw-sub">서버 인증 후 직원 데이터를 불러옵니다. 영문, 숫자, 기호를 조합한 비밀번호를 입력해 주세요.</div>
+    <input id="pw-input" class="pw-input" type="password" autocomplete="current-password" onkeydown="handlePasswordKey(event)" placeholder="비밀번호">
+    <div class="pw-error" id="pw-error"></div>
+    <div class="pw-actions">
+      <button class="pw-btn s" onclick="closePasswordGate()">취소</button>
+      <button class="pw-btn p" onclick="submitPasswordGate()">확인</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
