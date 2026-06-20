@@ -24,10 +24,14 @@ function esc(v) {
   ));
 }
 
-function calcAge(by) { return TODAY.getFullYear() - by; }
+function calcAge(by) {
+  const n = Number(by);
+  return n ? TODAY.getFullYear() - n : '-';
+}
 
 function calcYears(d) {
   const ms = TODAY - new Date(d);
+  if (!Number.isFinite(ms)) return '-'; // 잘못된 날짜는 NaN년 대신 '-'
   const y = Math.floor(ms / (365.25 * 24 * 3600 * 1000));
   const m = Math.floor((ms % (365.25 * 24 * 3600 * 1000)) / (30.44 * 24 * 3600 * 1000));
   return y + '년 ' + m + '개월';
@@ -581,19 +585,27 @@ function readEmployeeForm(base) {
   };
 }
 
+// 형식 + 실제 달력 유효성(2026-99-99 등 차단)
+function isValidDate(s) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (!m) return false;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const dt = new Date(Date.UTC(y, mo - 1, d));
+  return dt.getUTCFullYear() === y && dt.getUTCMonth() === mo - 1 && dt.getUTCDate() === d;
+}
+
 function validateEmployee(emp, originalEmpNo = '') {
-  const dateRe = /^\d{4}-\d{2}-\d{2}$/;
   if (!emp.name) return '성명을 입력해 주세요.';
   if (!emp.empNo) return '직원번호를 입력해 주세요.';
   if (!/^\d+$/.test(emp.empNo)) return '직원번호는 숫자만 입력해 주세요.';
   if (!emp.dept) return '부서를 입력해 주세요.';
   if (!emp.team) return '팀을 입력해 주세요.';
-  if (!dateRe.test(emp.joinDate)) return '입행일은 YYYY-MM-DD 형식으로 입력해 주세요.';
+  if (!isValidDate(emp.joinDate)) return '입행일은 실제 존재하는 YYYY-MM-DD 날짜로 입력해 주세요.';
   if (!emp.birthYear || emp.birthYear < 1900 || emp.birthYear > TODAY.getFullYear()) return '출생년도를 올바르게 입력해 주세요.';
-  if (!dateRe.test(emp.birth)) return '생년월일은 YYYY-MM-DD 형식으로 입력해 주세요.';
+  if (!isValidDate(emp.birth)) return '생년월일은 실제 존재하는 YYYY-MM-DD 날짜로 입력해 주세요.';
   if (emp.gradeLevel < 1) return '등급은 1 이상으로 입력해 주세요.';
   for (const key of ['gradeUpDate', 'gradeSetDate', 'gradeNextDate']) {
-    if (emp[key] && !dateRe.test(emp[key])) return '직급/등급 날짜는 YYYY-MM-DD 형식으로 입력해 주세요.';
+    if (emp[key] && !isValidDate(emp[key])) return '직급/등급 날짜는 실제 존재하는 YYYY-MM-DD 날짜로 입력해 주세요.';
   }
   if (EMP.some(e => e.empNo === emp.empNo && e.empNo !== originalEmpNo)) return '이미 사용 중인 직원번호입니다.';
   return '';
@@ -936,6 +948,31 @@ function downloadTemplate() {
   triggerDownload([csvRow(CSV_HEADERS), csvRow(ex)].join('\n'), 'EIMS_직원데이터_템플릿.csv');
 }
 
+// RFC 4180 파서: 따옴표 필드 내 쉼표/줄바꿈, escaped quote("")를 보존하며 전체를 행 단위로 토큰화
+function parseCSV(text) {
+  const rows = [];
+  let row = [], field = '', inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQ) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; } // "" -> 리터럴 "
+        else inQ = false;
+      } else field += ch;
+    } else if (ch === '"') {
+      inQ = true;
+    } else if (ch === ',') {
+      row.push(field); field = '';
+    } else if (ch === '\n') {
+      row.push(field); rows.push(row); row = []; field = '';
+    } else if (ch !== '\r') {
+      field += ch; // 따옴표 밖 \r(즉 \r\n)은 무시
+    }
+  }
+  row.push(field); rows.push(row);
+  return rows;
+}
+
 function importCSV(input) {
   const file = input.files[0];
   if (!file) return;
@@ -943,23 +980,12 @@ function importCSV(input) {
   reader.onload = async ev => {
     let text = ev.target.result;
     if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
-    const parseRow = line => {
-      const res = []; let inQ = false, cur = '';
-      for (const ch of line) {
-        if (ch === '"') { inQ = !inQ; }
-        else if (ch === ',' && !inQ) { res.push(cur); cur = ''; }
-        else cur += ch;
-      }
-      res.push(cur);
-      return res;
-    };
-    const lines = text.split('\n').map(l => l.replace(/\r$/, '')).filter(l => l.trim());
-    if (lines.length < 2) { alert('데이터가 없습니다.'); return; }
-    const hdrs = parseRow(lines[0]).map(h => h.trim());
+    const rows = parseCSV(text).filter(r => r.some(c => c.trim() !== ''));
+    if (rows.length < 2) { alert('데이터가 없습니다.'); return; }
+    const hdrs = rows[0].map(h => h.trim());
     const colMap = {};
     CSV_HEADERS.forEach((h, i) => { colMap[h] = CSV_FIELDS[i]; });
-    const imported = lines.slice(1).map((line, i) => {
-      const vals = parseRow(line);
+    const imported = rows.slice(1).map((vals, i) => {
       const obj = {};
       hdrs.forEach((h, j) => { const key = colMap[h]; if (key) obj[key] = vals[j] !== undefined ? vals[j].trim() : ''; });
       obj.no = parseInt(obj.no) || (i + 1);

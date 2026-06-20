@@ -194,19 +194,27 @@ function normalizeEmployee(input, fallback = {}) {
   };
 }
 
+// 형식 + 실제 달력 유효성(2026-99-99 등 차단): 구성요소가 Date로 왕복해도 동일한지 확인
+function isValidDate(s) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (!m) return false;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const dt = new Date(Date.UTC(y, mo - 1, d));
+  return dt.getUTCFullYear() === y && dt.getUTCMonth() === mo - 1 && dt.getUTCDate() === d;
+}
+
 function validateEmployee(emp, employees, originalEmpNo = '') {
-  const dateRe = /^\d{4}-\d{2}-\d{2}$/;
   if (!emp.name) return '성명을 입력해 주세요.';
   if (!emp.empNo || !/^\d+$/.test(emp.empNo)) return '직원번호는 숫자로 입력해 주세요.';
   if (employees.some(e => e.empNo === emp.empNo && e.empNo !== originalEmpNo)) return '이미 사용 중인 직원번호입니다.';
   if (!emp.dept) return '부서를 입력해 주세요.';
   if (!emp.team) return '팀을 입력해 주세요.';
-  if (!dateRe.test(emp.joinDate)) return '입행일은 YYYY-MM-DD 형식으로 입력해 주세요.';
+  if (!isValidDate(emp.joinDate)) return '입행일은 실제 존재하는 YYYY-MM-DD 날짜로 입력해 주세요.';
   if (!emp.birthYear || emp.birthYear < 1900 || emp.birthYear > new Date().getFullYear()) return '출생년도를 올바르게 입력해 주세요.';
-  if (!dateRe.test(emp.birth)) return '생년월일은 YYYY-MM-DD 형식으로 입력해 주세요.';
+  if (!isValidDate(emp.birth)) return '생년월일은 실제 존재하는 YYYY-MM-DD 날짜로 입력해 주세요.';
   if (emp.gradeLevel < 1) return '등급은 1 이상으로 입력해 주세요.';
   for (const key of ['gradeUpDate', 'gradeSetDate', 'gradeNextDate']) {
-    if (emp[key] && !dateRe.test(emp[key])) return '직급/등급 날짜는 YYYY-MM-DD 형식으로 입력해 주세요.';
+    if (emp[key] && !isValidDate(emp[key])) return '직급/등급 날짜는 실제 존재하는 YYYY-MM-DD 날짜로 입력해 주세요.';
   }
   return '';
 }
