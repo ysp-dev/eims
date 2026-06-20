@@ -12,7 +12,7 @@ let EMP = [];
 const charts = {};
 const TODAY = new Date();
 const EMP_PASSWORD_RULE = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
-const PROTECTED_SCREENS = new Set(['dashboard', 'emplist', 'dept', 'stats', 'detail']);
+const PROTECTED_SCREENS = new Set(['dashboard', 'emplist', 'stats', 'detail']);
 
 // ═══════════════════════════════════════
 //  HELPERS
@@ -84,9 +84,8 @@ function resetCharts() {
 function refreshViews() {
   resetCharts();
   renderHeader();
-  renderRecent();
+  renderDept(); // 팀별 카드는 이제 대시보드에 표시됨
   if (S.screen === 'emplist') renderEmpList();
-  if (S.screen === 'dept') renderDept();
   if (S.screen === 'detail' && S.selectedEmpNo) renderDetail();
   setTimeout(initCharts, 100);
 }
@@ -111,12 +110,11 @@ function activateScreen(screen) {
   if (sc) sc.classList.add('active');
   const nb = document.querySelector(`[data-screen="${screen}"]`);
   if (nb) nb.classList.add('active');
-  const titles = { dashboard: '대시보드', emplist: '직원 목록', dept: '팀별 현황', stats: '통계 분석', detail: '직원 상세' };
+  const titles = { dashboard: '대시보드', emplist: '직원 목록', stats: '통계 분석', detail: '직원 상세' };
   const pt = document.getElementById('page-title');
   if (pt) pt.textContent = titles[screen] || screen;
-  if (screen === 'dashboard') { renderHeader(); renderRecent(); }
+  if (screen === 'dashboard') { renderHeader(); renderDept(); }
   if (screen === 'emplist') renderEmpList();
-  if (screen === 'dept')   renderDept();
   if (screen === 'detail') renderDetail();
   if (screen === 'stats')  renderHeader();
   initCharts();
@@ -275,23 +273,6 @@ function renderHeader() {
   if (stFemale) stFemale.textContent = n - male;
   const stFemaleU = document.getElementById('st-female-u');
   if (stFemaleU) stFemaleU.textContent = `명 (${pct(n - male)}%)`;
-}
-
-// ═══════════════════════════════════════
-//  RECENT TABLE
-// ═══════════════════════════════════════
-function renderRecent() {
-  const tbody = document.getElementById('recent-tbody');
-  if (!tbody) return;
-  const recent = [...EMP].sort((a, b) => b.joinDate.localeCompare(a.joinDate)).slice(0, 5);
-  tbody.innerHTML = recent.map(e => `
-    <tr data-click="openDetail" data-empno="${esc(e.empNo)}">
-      <td><div style="display:flex;align-items:center;gap:8px">${av(e.name, 24)}<span style="color:#C0C0D8;font-weight:500">${esc(e.name)}</span></div></td>
-      <td>${esc(e.team)}</td>
-      <td>${gtag(e.grade)}</td>
-      <td style="color:#8080AA">${esc(e.joinDate)}</td>
-      <td style="color:#FFBC00">${calcYears(e.joinDate)}</td>
-    </tr>`).join('');
 }
 
 // ═══════════════════════════════════════
@@ -676,16 +657,16 @@ function renderDept() {
       <div class="dept-card">
         <div class="dept-hd">
           <div>
-            <div style="font-size:13px;font-weight:700;color:#D0D0E8">${esc(t)}</div>
-            <div style="font-size:11px;color:#6C6C90;margin-top:2px">${esc(dept)}</div>
+            <div style="font-size:12px;font-weight:700;color:#D0D0E8">${esc(t)}</div>
+            <div style="font-size:10px;color:#6C6C90;margin-top:2px">${esc(dept)}</div>
           </div>
-          <div style="width:36px;height:36px;background:linear-gradient(135deg,${g1},${g2});border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#0F0F14">${esc(t[0])}</div>
+          <div style="width:28px;height:28px;background:linear-gradient(135deg,${g1},${g2});border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#0F0F14;flex-shrink:0">${esc(t[0])}</div>
         </div>
-        <div style="display:flex;gap:12px;margin-bottom:12px">
-          <div><div style="font-size:22px;font-weight:700;color:#E8E8F0">${te.length}</div><div style="font-size:11px;color:#6C6C90">총 인원</div></div>
-          <div><div style="font-size:22px;font-weight:700;color:#5B9BD5">${male}</div><div style="font-size:11px;color:#6C6C90">남성</div></div>
-          <div><div style="font-size:22px;font-weight:700;color:#E84D8A">${te.length - male}</div><div style="font-size:11px;color:#6C6C90">여성</div></div>
-          <div><div style="font-size:22px;font-weight:700;color:#FFBC00">${avgAge}</div><div style="font-size:11px;color:#6C6C90">평균연령</div></div>
+        <div style="display:flex;gap:6px;margin-bottom:10px">
+          <div><div style="font-size:16px;font-weight:700;color:#E8E8F0">${te.length}</div><div style="font-size:10px;color:#6C6C90">총원</div></div>
+          <div><div style="font-size:16px;font-weight:700;color:#5B9BD5">${male}</div><div style="font-size:10px;color:#6C6C90">남</div></div>
+          <div><div style="font-size:16px;font-weight:700;color:#E84D8A">${te.length - male}</div><div style="font-size:10px;color:#6C6C90">여</div></div>
+          <div><div style="font-size:16px;font-weight:700;color:#FFBC00">${avgAge}</div><div style="font-size:10px;color:#6C6C90">평균</div></div>
         </div>
         <div class="grade-grid">
           <div class="gc l1"><div class="gn">${l1}</div><div class="gl">L1</div></div>
@@ -833,7 +814,7 @@ function initCharts() {
     }
   }
 
-  if (sc === 'dept') {
+  if (sc === 'stats') {
     const teams = [...new Set(EMP.map(e => e.team))];
     const el = document.getElementById('c-dept-detail');
     if (el && !charts.dd) {

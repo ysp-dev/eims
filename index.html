@@ -31,10 +31,6 @@
       <span>직원 목록</span>
     </button>
     <div class="nav-sec">현황 분석</div>
-    <button class="nav-btn" data-screen="dept" data-click="navigate">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-      <span>팀별 현황</span>
-    </button>
     <button class="nav-btn" data-screen="stats" data-click="navigate">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       <span>통계 분석</span>
@@ -59,44 +55,25 @@
     <div id="screen-dashboard" class="screen active">
       <div class="kpi-grid">
         <div class="kpi-card">
-          <div class="kpi-hd">
-            <span class="kpi-lbl">전체 직원</span>
-            <div class="kpi-ico" style="background:rgba(255,188,0,.1)">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFBC00" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            </div>
+          <div class="kpi-ico" style="background:rgba(255,188,0,.1)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFBC00" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           </div>
+          <span class="kpi-lbl">전체 직원</span>
           <div class="kpi-val"><span id="kpi-total"></span><span class="kpi-unit">명</span></div>
-          <div class="kpi-sub" id="kpi-depts"></div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-hd">
-            <span class="kpi-lbl">평균 근속연수</span>
-            <div class="kpi-ico" style="background:rgba(244,102,0,.1)">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F46600" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            </div>
+          <div class="kpi-ico" style="background:rgba(244,102,0,.1)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F46600" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           </div>
+          <span class="kpi-lbl">평균 근속연수</span>
           <div class="kpi-val" id="kpi-avg"></div>
-          <div class="kpi-sub">장기 근속 우수</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-hd">
-            <span class="kpi-lbl">성별 비율</span>
-            <div class="kpi-ico" style="background:rgba(91,155,213,.1)">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5B9BD5" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-            </div>
-          </div>
-          <div class="kpi-val" style="color:#5B9BD5"><span id="kpi-male-pct"></span><span class="kpi-unit">남</span></div>
-          <div class="kpi-sub">여성 <span id="kpi-female-pct"></span></div>
         </div>
         <div class="kpi-card alert">
-          <div class="kpi-hd">
-            <span class="kpi-lbl">임피 근접 (53세+)</span>
-            <div class="kpi-ico" style="background:rgba(244,102,0,.14)">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F46600" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            </div>
+          <div class="kpi-ico" style="background:rgba(244,102,0,.14)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F46600" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
           </div>
+          <span class="kpi-lbl">임피 근접 (53세+)</span>
           <div class="kpi-val" style="color:#F46600" id="kpi-retire"></div>
-          <div class="kpi-sub">인력 계획 검토 필요</div>
         </div>
       </div>
 
@@ -104,21 +81,11 @@
         <div class="ch-card"><div class="ch-title">팀별 인원 현황</div><div class="ch-sub">팀 기준 직원 분포</div><div style="height:185px;position:relative"><canvas id="c-dept"></canvas></div></div>
         <div class="ch-card"><div class="ch-title">직급별 분포</div><div class="ch-sub">직급 기준 인원 현황</div><div style="height:185px;position:relative"><canvas id="c-grade"></canvas></div></div>
       </div>
+      <div class="dept-grid" id="dept-cards"></div>
+
       <div class="ch-grid-12">
         <div class="ch-card"><div class="ch-title">성별 비율</div><div class="ch-sub">남성 / 여성 비율</div><div style="height:145px;position:relative"><canvas id="c-gender"></canvas></div></div>
         <div class="ch-card"><div class="ch-title">연도별 입행 현황</div><div class="ch-sub">연도별 신규 입행 인원 추이</div><div style="height:145px;position:relative"><canvas id="c-join"></canvas></div></div>
-      </div>
-
-      <div class="tbl-wrap">
-        <div class="tbl-head-row">
-          <div>
-            <div style="font-size:12px;font-weight:600;color:#A0A0C0">최근 입행 직원</div>
-            <div style="font-size:11px;color:#6C6C90;margin-top:2px">입행일 기준 최근 5명</div>
-          </div>
-          <button class="view-all" data-click="navigate" data-arg="emplist">전체 보기 →</button>
-        </div>
-        <table><thead><tr><th>성명</th><th>팀</th><th>직급</th><th>입행일</th><th>근속기간</th></tr></thead>
-        <tbody id="recent-tbody"></tbody></table>
       </div>
     </div>
 
@@ -203,16 +170,6 @@
       <div class="det-grid" id="det-grid"></div>
     </div>
 
-    <!-- ══ DEPARTMENT STATUS ══ -->
-    <div id="screen-dept" class="screen">
-      <div class="dept-grid" id="dept-cards"></div>
-      <div class="ch-card">
-        <div class="ch-title">팀별 직급 구성 비교</div>
-        <div class="ch-sub">팀별 직급 분포 현황</div>
-        <div style="height:250px;position:relative"><canvas id="c-dept-detail"></canvas></div>
-      </div>
-    </div>
-
     <!-- ══ STATISTICS ══ -->
     <div id="screen-stats" class="screen">
       <div class="stats-grid3">
@@ -239,6 +196,11 @@
         <div class="ch-card"><div class="ch-title">연령대 분포</div><div class="ch-sub">10년 단위 연령 구간</div><div style="height:200px;position:relative"><canvas id="c-age"></canvas></div></div>
         <div class="ch-card"><div class="ch-title">근속연수 분포</div><div class="ch-sub">구간별 근속 인원</div><div style="height:200px;position:relative"><canvas id="c-tenure"></canvas></div></div>
         <div class="ch-card"><div class="ch-title">등급 현황</div><div class="ch-sub">등급별 인원 현황</div><div style="height:200px;position:relative"><canvas id="c-level"></canvas></div></div>
+      </div>
+      <div class="ch-card" style="margin-top:13px">
+        <div class="ch-title">팀별 직급 구성 비교</div>
+        <div class="ch-sub">팀별 직급 분포 현황</div>
+        <div style="height:250px;position:relative"><canvas id="c-dept-detail"></canvas></div>
       </div>
     </div>
 

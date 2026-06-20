@@ -38,15 +38,13 @@ select option{background:#1A1A24;color:#D0D0E8}
 .screen.active{display:block}
 
 /* ── KPI ── */
-.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:15px}
-.kpi-card{background:#1A1A24;border:1px solid #1E1E2E;border-radius:12px;padding:16px}
+.kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:15px}
+.kpi-card{background:#1A1A24;border:1px solid #1E1E2E;border-radius:12px;padding:11px 15px;display:flex;align-items:center;gap:11px}
 .kpi-card.alert{border-color:rgba(244,102,0,.2)}
-.kpi-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.kpi-lbl{font-size:11px;color:#6C6C90;font-weight:500}
-.kpi-ico{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center}
-.kpi-val{font-size:26px;font-weight:700;color:#E8E8F0;line-height:1}
-.kpi-unit{font-size:14px;color:#8080AA;margin-left:3px}
-.kpi-sub{font-size:11px;color:#6C6C90;margin-top:6px}
+.kpi-lbl{font-size:12px;color:#6C6C90;font-weight:500;flex:1}
+.kpi-ico{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.kpi-val{font-size:22px;font-weight:700;color:#E8E8F0;line-height:1;white-space:nowrap}
+.kpi-unit{font-size:13px;color:#8080AA;margin-left:3px}
 
 /* ── Charts ── */
 .ch-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:13px}
@@ -91,17 +89,20 @@ tbody tr:hover .row-actions{background:#1E1E29}
 .row-act:hover{filter:brightness(1.18)}
 
 /* ── Dept cards ── */
-.dept-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:13px;margin-bottom:15px}
-.dept-card{background:#1A1A24;border:1px solid #1E1E2E;border-radius:12px;padding:17px}
-.dept-hd{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:11px}
-.grade-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}
-.gc{text-align:center;padding:6px 2px;border-radius:6px}
+.dept-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:15px}
+.dept-card{background:#1A1A24;border:1px solid #1E1E2E;border-radius:10px;padding:12px}
+.dept-hd{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:9px}
+.grade-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:8px}
+.gc{text-align:center;padding:5px 1px;border-radius:5px}
 .gc.l4{background:rgba(0,102,255,.1)}.gc.l4 .gn{color:#0066FF}
 .gc.l3{background:rgba(230,57,70,.1)}.gc.l3 .gn{color:#E63946}
 .gc.l2{background:rgba(249,168,37,.1)}.gc.l2 .gn{color:#F9A825}
 .gc.l1{background:rgba(128,128,160,.1)}.gc.l1 .gn{color:#8080A0}
-.gn{font-size:16px;font-weight:700}
-.gl{font-size:10px;color:#6C6C90;margin-top:2px}
+.gn{font-size:14px;font-weight:700}
+.gl{font-size:9px;color:#6C6C90;margin-top:1px}
+/* 화면이 좁아지면 자동으로 줄당 카드 수를 줄임 */
+@media(max-width:1280px){.dept-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:720px){.dept-grid{grid-template-columns:repeat(2,1fr)}}
 
 /* ── Stats ── */
 .stats-grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:15px}
