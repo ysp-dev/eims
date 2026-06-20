@@ -157,11 +157,48 @@ async function apiRequest(url, options = {}) {
     // 세션 만료: 인증 상태를 내리고 다시 잠금 화면을 띄운다
     S.authenticated = false;
     sessionStorage.removeItem('eims_auth');
+    stopIdleTimer();
     openPasswordGate();
   }
   if (!res.ok) throw new Error(data.error || '요청 처리 중 오류가 발생했습니다.');
   return data;
 }
+
+// ═══════════════════════════════════════
+//  유휴(IDLE) 자동 로그아웃
+// ═══════════════════════════════════════
+// 로그인 상태에서 사용자 입력이 IDLE_TIMEOUT_MS 동안 전혀 없으면 자동으로 로그아웃하고
+// 잠금 화면을 띄운다. (서버 세션 TTL과 동일한 30분으로 맞춘다)
+const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
+let idleTimer = null;
+
+function resetIdleTimer() {
+  if (!S.authenticated) return;
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(handleIdleTimeout, IDLE_TIMEOUT_MS);
+}
+
+function stopIdleTimer() {
+  clearTimeout(idleTimer);
+  idleTimer = null;
+}
+
+async function handleIdleTimeout() {
+  if (!S.authenticated) return;
+  // 먼저 인증 상태를 내려야 apiRequest의 401 처리와 중복으로 잠금 화면이 뜨지 않는다
+  S.authenticated = false;
+  sessionStorage.removeItem('eims_auth');
+  try {
+    await apiRequest('/api/logout', { method: 'POST' });
+  } catch (_) {}
+  S.pendingScreen = S.screen;
+  openPasswordGate();
+}
+
+// 사용자 활동 감지: 어떤 입력이라도 있으면 유휴 타이머를 리셋한다
+['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart'].forEach(type => {
+  document.addEventListener(type, resetIdleTimer, { passive: true });
+});
 
 async function loadEmployees() {
   const data = await apiRequest('/api/employees');
@@ -181,6 +218,7 @@ async function submitPasswordGate() {
     await apiRequest('/api/login', { method: 'POST', body: JSON.stringify({ password: val }) });
     S.authenticated = true;
     sessionStorage.setItem('eims_auth', '1');
+    resetIdleTimer();
     await loadEmployees();
   } catch (e) {
     if (err) err.textContent = e.message;
@@ -195,6 +233,61 @@ async function submitPasswordGate() {
 function handlePasswordKey(ev) {
   if (ev.key === 'Enter') submitPasswordGate();
   if (ev.key === 'Escape') closePasswordGate();
+}
+
+// ═══════════════════════════════════════
+//  비밀번호 변경 (현재 → 새 → 확인 차례로 입력)
+// ═══════════════════════════════════════
+const CPW_FIELDS = ['cpw-current', 'cpw-new', 'cpw-confirm'];
+
+function openChangePw() {
+  if (!S.authenticated) { S.pendingScreen = S.screen; openPasswordGate(); return; }
+  const modal = document.getElementById('cpw-modal');
+  if (!modal) return;
+  CPW_FIELDS.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const err = document.getElementById('cpw-error');
+  if (err) err.textContent = '';
+  modal.classList.add('show');
+  setTimeout(() => document.getElementById('cpw-current')?.focus(), 50);
+}
+
+function closeChangePw() {
+  const modal = document.getElementById('cpw-modal');
+  if (modal) modal.classList.remove('show');
+}
+
+// Enter는 다음 칸으로 이동(마지막 칸에선 제출), Escape는 닫기
+function handleChangePwKey(el, ev) {
+  if (ev.key === 'Escape') { closeChangePw(); return; }
+  if (ev.key !== 'Enter') return;
+  const idx = CPW_FIELDS.indexOf(el.id);
+  if (idx >= 0 && idx < CPW_FIELDS.length - 1) {
+    document.getElementById(CPW_FIELDS[idx + 1])?.focus();
+  } else {
+    submitChangePw();
+  }
+}
+
+async function submitChangePw() {
+  const cur = document.getElementById('cpw-current');
+  const nw = document.getElementById('cpw-new');
+  const cf = document.getElementById('cpw-confirm');
+  const err = document.getElementById('cpw-error');
+  const current = cur?.value || '';
+  const next = nw?.value || '';
+  const confirmVal = cf?.value || '';
+  const fail = (msg, focus) => { if (err) err.textContent = msg; focus?.focus(); };
+  if (!current) return fail('현재 비밀번호를 입력해 주세요.', cur);
+  if (!EMP_PASSWORD_RULE.test(next)) return fail('새 비밀번호는 영문, 숫자, 기호를 포함해 8자 이상이어야 합니다.', nw);
+  if (next !== confirmVal) return fail('새 비밀번호 확인이 일치하지 않습니다.', cf);
+  if (next === current) return fail('새 비밀번호는 현재 비밀번호와 달라야 합니다.', nw);
+  try {
+    await apiRequest('/api/password', { method: 'POST', body: JSON.stringify({ current, next }) });
+  } catch (e) {
+    return fail(e.message, cur);
+  }
+  closeChangePw();
+  alert('비밀번호가 변경되었습니다.');
 }
 
 // ═══════════════════════════════════════
@@ -1014,6 +1107,10 @@ const ACTIONS = {
   closePasswordGate: () => closePasswordGate(),
   submitPasswordGate: () => submitPasswordGate(),
   handlePasswordKey: (el, ev) => handlePasswordKey(ev),
+  openChangePw: () => openChangePw(),
+  closeChangePw: () => closeChangePw(),
+  submitChangePw: () => submitChangePw(),
+  handleChangePwKey: (el, ev) => handleChangePwKey(el, ev),
 };
 
 function delegate(type) {
@@ -1041,6 +1138,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const session = await apiRequest('/api/session');
       if (session.authenticated) {
         S.authenticated = true;
+        resetIdleTimer();
         await loadEmployees();
         activateScreen('dashboard');
         return;

@@ -46,7 +46,12 @@
       <div class="tb-div"></div>
       <span id="cur-date"></span>
     </div>
-    <div class="tb-right"></div>
+    <div class="tb-right">
+      <button class="tb-btn" data-click="openChangePw" title="접속 비밀번호 변경">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        비밀번호 변경
+      </button>
+    </div>
   </header>
 
   <div id="content">
@@ -220,6 +225,24 @@
     <div class="pw-actions">
       <button class="pw-btn s" data-click="closePasswordGate">취소</button>
       <button class="pw-btn p" data-click="submitPasswordGate">확인</button>
+    </div>
+  </div>
+</div>
+
+<div class="pw-modal" id="cpw-modal" aria-hidden="true">
+  <div class="pw-card" role="dialog" aria-modal="true" aria-labelledby="cpw-title">
+    <div class="pw-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFBC00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </div>
+    <div class="pw-title" id="cpw-title">비밀번호 변경</div>
+    <div class="pw-sub">현재 비밀번호와 새 비밀번호를 차례로 입력해 주세요. 새 비밀번호는 영문, 숫자, 기호를 조합해 8자 이상이어야 합니다.</div>
+    <input id="cpw-current" class="pw-input" type="password" autocomplete="current-password" placeholder="현재 비밀번호" data-keydown="handleChangePwKey">
+    <input id="cpw-new" class="pw-input pw-stack" type="password" autocomplete="new-password" placeholder="새 비밀번호" data-keydown="handleChangePwKey">
+    <input id="cpw-confirm" class="pw-input pw-stack" type="password" autocomplete="new-password" placeholder="새 비밀번호 확인" data-keydown="handleChangePwKey">
+    <div class="pw-error" id="cpw-error"></div>
+    <div class="pw-actions">
+      <button class="pw-btn s" data-click="closeChangePw">취소</button>
+      <button class="pw-btn p" data-click="submitChangePw">변경</button>
     </div>
   </div>
 </div>

@@ -5,6 +5,7 @@ const crypto = require('crypto');
 
 const ROOT = __dirname;
 const DATA_FILE = path.join(ROOT, 'data', 'employees.json');
+const AUTH_FILE = path.join(ROOT, 'data', 'auth.json');
 const PORT = Number(process.env.PORT || 7000);
 const SESSION_TTL_MS = 30 * 60 * 1000;
 const MAX_AUTH_FAILS = 5;
@@ -12,7 +13,7 @@ const AUTH_LOCK_MS = 30 * 1000;
 const PASSWORD_RULE = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 const SECURE_COOKIE = process.env.EIMS_SECURE === '1';
 const COOKIE_FLAGS = `HttpOnly; SameSite=Lax; Path=/${SECURE_COOKIE ? '; Secure' : ''}`;
-const PASSWORD_HASH = resolvePasswordHash();
+let PASSWORD_HASH = resolvePasswordHash();
 
 const sessions = new Map();
 const authFailures = new Map();
@@ -35,28 +36,65 @@ function generatePassword() {
   return crypto.randomBytes(9).toString('base64url') + pick(upper) + pick(digit) + pick(symbol);
 }
 
-// 비밀번호 해시 결정: 환경변수 우선, 없으면 1회용 임시 비밀번호를 생성해 콘솔에 출력
-// (소스코드에 비밀번호/해시를 절대 하드코딩하지 않는다)
-function resolvePasswordHash() {
-  const fromJson = parsePasswordHash(process.env.EIMS_PASSWORD_HASH_JSON);
-  if (fromJson) return fromJson;
-
+// 평문 비밀번호 → PBKDF2-SHA256 해시 레코드 (salt/hash는 base64로 직렬화)
+function hashPassword(password) {
   const iterations = 310000;
   const digest = 'sha256';
   const salt = crypto.randomBytes(16);
+  const hash = crypto.pbkdf2Sync(password, salt, iterations, 32, digest);
+  return { iterations, salt: salt.toString('base64'), hash: hash.toString('base64'), digest };
+}
+
+// 저장된 비밀번호 해시 파일 읽기 (없거나 손상 시 null)
+function readStoredPasswordHash() {
+  try {
+    return parsePasswordHash(fs.readFileSync(AUTH_FILE, 'utf8'));
+  } catch (_) {
+    return null;
+  }
+}
+
+// 변경된 비밀번호 해시를 파일에 영구 저장 (원자적 교체 + 소유자만 접근)
+function persistPasswordHash(hashObj) {
+  const tmp = `${AUTH_FILE}.${process.pid}.tmp`;
+  fs.writeFileSync(tmp, `${JSON.stringify(hashObj)}\n`, { encoding: 'utf8', mode: 0o600 });
+  fs.renameSync(tmp, AUTH_FILE);
+}
+
+// 런타임에 비밀번호를 변경하고 즉시 영구 저장 (재기동 후에도 유지)
+function setPassword(password) {
+  const next = hashPassword(password);
+  persistPasswordHash(next);
+  PASSWORD_HASH = next;
+}
+
+// 비밀번호 해시 결정 우선순위:
+//   1) 운영 중 변경되어 저장된 해시 파일(data/auth.json) — 사용자가 마지막으로 설정한 값
+//   2) EIMS_PASSWORD_HASH_JSON 환경변수로 고정한 해시
+//   3) EIMS_PASSWORD 평문 환경변수
+//   4) 없으면 1회용 임시 비밀번호를 생성해 콘솔에 출력
+// (소스코드에 비밀번호/해시를 절대 하드코딩하지 않는다)
+function resolvePasswordHash() {
+  const stored = readStoredPasswordHash();
+  if (stored) return stored;
+
+  const fromJson = parsePasswordHash(process.env.EIMS_PASSWORD_HASH_JSON);
+  if (fromJson) return fromJson;
+
   let password = process.env.EIMS_PASSWORD;
   const generated = !password;
   if (generated) password = generatePassword();
 
-  const hash = crypto.pbkdf2Sync(password, salt, iterations, 32, digest);
+  const result = hashPassword(password);
   if (generated) {
     console.log('────────────────────────────────────────────');
     console.log('  EIMS 임시 접속 비밀번호 (이번 기동에서만 유효):');
     console.log(`     ${password}`);
     console.log('  영구 설정: EIMS_PASSWORD 또는 EIMS_PASSWORD_HASH_JSON 환경변수 사용');
+    console.log('  (앱에서 비밀번호 변경 시 data/auth.json 에 저장되어 재기동 후에도 유지)');
     console.log('────────────────────────────────────────────');
   }
-  return { iterations, salt: salt.toString('base64'), hash: hash.toString('base64'), digest };
+  return result;
 }
 
 function send(res, status, body, headers = {}) {
@@ -300,6 +338,23 @@ async function handleApi(req, res, pathname) {
   }
 
   if (!requireSession(req, res)) return;
+
+  // 비밀번호 변경: 현재 비밀번호 확인 → 새 비밀번호 규칙 검증 → 저장
+  if (pathname === '/api/password' && req.method === 'POST') {
+    const body = await readJson(req);
+    const current = String(body.current || '');
+    const next = String(body.next || '');
+    if (!verifyPassword(current)) return send(res, 401, { error: '현재 비밀번호가 일치하지 않습니다.' });
+    if (!PASSWORD_RULE.test(next)) return send(res, 400, { error: '새 비밀번호는 영문, 숫자, 기호를 포함해 8자 이상이어야 합니다.' });
+    if (next === current) return send(res, 400, { error: '새 비밀번호는 현재 비밀번호와 달라야 합니다.' });
+    setPassword(next);
+    // 보안: 비밀번호 변경 시 현재 세션을 제외한 다른 모든 세션을 무효화한다
+    const myToken = parseCookies(req).eims_session;
+    for (const token of [...sessions.keys()]) {
+      if (token !== myToken) sessions.delete(token);
+    }
+    return send(res, 200, { ok: true });
+  }
 
   if (pathname === '/api/employees' && req.method === 'GET') {
     return send(res, 200, { employees: loadEmployees() });

@@ -170,9 +170,14 @@ select.edt-inp{appearance:none;-webkit-appearance:none;background-image:url("dat
 .pw-sub{font-size:11px;color:#8080AA;line-height:1.5;margin-bottom:14px}
 .pw-input{width:100%;height:38px;background:#0F0F14;border:1px solid #252540;border-radius:8px;color:#E0E0F0;font-size:13px;font-family:'Noto Sans KR',sans-serif;padding:0 11px;outline:none}
 .pw-input:focus{border-color:#FFBC00;background:#0A0A12}
+.pw-stack{margin-top:8px}
 .pw-error{min-height:18px;font-size:11px;color:#FF6B78;margin-top:7px}
 .pw-actions{display:flex;gap:8px;margin-top:10px}
 .pw-btn{flex:1;height:34px;border-radius:8px;font-size:12px;font-family:'Noto Sans KR',sans-serif;cursor:pointer}
 .pw-btn.s{background:transparent;border:1px solid #2A2A3E;color:#9090BC}
 .pw-btn.p{background:rgba(255,188,0,.1);border:1px solid rgba(255,188,0,.24);color:#FFBC00;font-weight:600}
 .pw-btn:hover{filter:brightness(1.12)}
+
+/* ── 상단 바 비밀번호 변경 버튼 ── */
+.tb-btn{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;background:rgba(144,144,188,.08);border:1px solid #2A2A3E;border-radius:8px;color:#9090BC;font-size:12px;font-family:'Noto Sans KR',sans-serif;cursor:pointer}
+.tb-btn:hover{background:rgba(255,188,0,.1);border-color:rgba(255,188,0,.24);color:#FFBC00}
