@@ -11,7 +11,7 @@ const S = {
 let EMP = [];
 const charts = {};
 const TODAY = new Date();
-const EMP_PASSWORD_RULE = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+const EMP_PASSWORD_RULE = /^.{4,}$/; // 내부망용: 4자 이상이면 어떤 문자든 허용
 const PROTECTED_SCREENS = new Set(['dashboard', 'emplist', 'stats', 'detail']);
 
 // ═══════════════════════════════════════
@@ -183,16 +183,29 @@ function stopIdleTimer() {
   idleTimer = null;
 }
 
-async function handleIdleTimeout() {
+// 세션 종료 공통 처리: 서버 세션 무효화 + 로컬 인증 상태 해제 + 잠금 화면 표시
+async function endSession() {
   if (!S.authenticated) return;
   // 먼저 인증 상태를 내려야 apiRequest의 401 처리와 중복으로 잠금 화면이 뜨지 않는다
   S.authenticated = false;
   sessionStorage.removeItem('eims_auth');
+  stopIdleTimer();
   try {
     await apiRequest('/api/logout', { method: 'POST' });
   } catch (_) {}
   S.pendingScreen = S.screen;
   openPasswordGate();
+}
+
+function handleIdleTimeout() {
+  return endSession();
+}
+
+// 사용자가 직접 로그아웃
+function doLogout() {
+  if (!S.authenticated) return;
+  if (!confirm('로그아웃하시겠습니까?')) return;
+  endSession();
 }
 
 // 사용자 활동 감지: 어떤 입력이라도 있으면 유휴 타이머를 리셋한다
@@ -211,7 +224,7 @@ async function submitPasswordGate() {
   const err = document.getElementById('pw-error');
   const val = input?.value || '';
   if (!EMP_PASSWORD_RULE.test(val)) {
-    if (err) err.textContent = '영문, 숫자, 기호를 포함해 8자 이상 입력해 주세요.';
+    if (err) err.textContent = '비밀번호는 4자 이상 입력해 주세요.';
     return;
   }
   try {
@@ -278,7 +291,7 @@ async function submitChangePw() {
   const confirmVal = cf?.value || '';
   const fail = (msg, focus) => { if (err) err.textContent = msg; focus?.focus(); };
   if (!current) return fail('현재 비밀번호를 입력해 주세요.', cur);
-  if (!EMP_PASSWORD_RULE.test(next)) return fail('새 비밀번호는 영문, 숫자, 기호를 포함해 8자 이상이어야 합니다.', nw);
+  if (!EMP_PASSWORD_RULE.test(next)) return fail('새 비밀번호는 4자 이상이어야 합니다.', nw);
   if (next !== confirmVal) return fail('새 비밀번호 확인이 일치하지 않습니다.', cf);
   if (next === current) return fail('새 비밀번호는 현재 비밀번호와 달라야 합니다.', nw);
   try {
@@ -1111,6 +1124,7 @@ const ACTIONS = {
   closeChangePw: () => closeChangePw(),
   submitChangePw: () => submitChangePw(),
   handleChangePwKey: (el, ev) => handleChangePwKey(el, ev),
+  logout: () => doLogout(),
 };
 
 function delegate(type) {

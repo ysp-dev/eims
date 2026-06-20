@@ -10,7 +10,7 @@ const PORT = Number(process.env.PORT || 7000);
 const SESSION_TTL_MS = 30 * 60 * 1000;
 const MAX_AUTH_FAILS = 5;
 const AUTH_LOCK_MS = 30 * 1000;
-const PASSWORD_RULE = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+const PASSWORD_RULE = /^.{4,}$/; // 내부망용: 4자 이상이면 어떤 문자든 허용
 const SECURE_COOKIE = process.env.EIMS_SECURE === '1';
 const COOKIE_FLAGS = `HttpOnly; SameSite=Lax; Path=/${SECURE_COOKIE ? '; Secure' : ''}`;
 let PASSWORD_HASH = resolvePasswordHash();
@@ -317,7 +317,7 @@ async function handleApi(req, res, pathname) {
     }
     const body = await readJson(req);
     const password = String(body.password || '');
-    if (!PASSWORD_RULE.test(password)) return send(res, 400, { error: '영문, 숫자, 기호를 포함해 8자 이상 입력해 주세요.' });
+    if (!PASSWORD_RULE.test(password)) return send(res, 400, { error: '비밀번호는 4자 이상 입력해 주세요.' });
     if (!verifyPassword(password)) {
       state.count += 1;
       if (state.count >= MAX_AUTH_FAILS) {
@@ -345,7 +345,7 @@ async function handleApi(req, res, pathname) {
     const current = String(body.current || '');
     const next = String(body.next || '');
     if (!verifyPassword(current)) return send(res, 401, { error: '현재 비밀번호가 일치하지 않습니다.' });
-    if (!PASSWORD_RULE.test(next)) return send(res, 400, { error: '새 비밀번호는 영문, 숫자, 기호를 포함해 8자 이상이어야 합니다.' });
+    if (!PASSWORD_RULE.test(next)) return send(res, 400, { error: '새 비밀번호는 4자 이상이어야 합니다.' });
     if (next === current) return send(res, 400, { error: '새 비밀번호는 현재 비밀번호와 달라야 합니다.' });
     setPassword(next);
     // 보안: 비밀번호 변경 시 현재 세션을 제외한 다른 모든 세션을 무효화한다
