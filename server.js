@@ -220,17 +220,19 @@ const STATIC_TYPES = {
 
 // 공개 가능한 정적 자산만 명시적으로 허용 (서버 소스/데이터/.git 등은 일절 노출하지 않음)
 const PUBLIC_ROOT_FILES = new Set(['index.html', 'app.js', 'style.css']);
+const LIBS_DIR = path.join(ROOT, 'libs');
 
 function serveStatic(req, res, pathname) {
   const rel = pathname === '/' ? 'index.html' : pathname.replace(/^\/+/, '');
   const resolved = path.resolve(ROOT, rel);
 
-  // 화이트리스트: ROOT 직속 공개 파일 또는 libs/ 하위 + 허용 확장자, 숨김 경로 차단
-  const within = resolved === ROOT || resolved.startsWith(ROOT + path.sep);
-  const hidden = rel.split('/').some(seg => seg.startsWith('.'));
+  // 허용 판정은 '정규화된 resolved 경로' 기준으로만 한다 (원본 문자열 기준 traversal 우회 차단)
+  const isPublicRoot = [...PUBLIC_ROOT_FILES].some(f => resolved === path.join(ROOT, f));
+  const inLibs = resolved.startsWith(LIBS_DIR + path.sep);
   const allowedExt = Object.prototype.hasOwnProperty.call(STATIC_TYPES, path.extname(resolved));
-  const allowedPath = PUBLIC_ROOT_FILES.has(rel) || rel.startsWith('libs/');
-  if (!within || hidden || !allowedExt || !allowedPath) return send(res, 404, 'Not found');
+  // '..' 및 숨김(.git/.env 등) 세그먼트는 명시적으로도 차단 (이중 방어)
+  const badSeg = rel.split(/[\\/]/).some(seg => seg === '..' || seg.startsWith('.'));
+  if (badSeg || !allowedExt || !(isPublicRoot || inLibs)) return send(res, 404, 'Not found');
 
   fs.readFile(resolved, (err, data) => {
     if (err) return send(res, 404, 'Not found'); // 디렉터리는 EISDIR로 걸러짐

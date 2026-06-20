@@ -6,6 +6,7 @@ const S = {
   selectedEmpNo: null,
   formMode: 'edit',
   pendingScreen: 'dashboard',
+  authenticated: false,
 };
 let EMP = [];
 const charts = {};
@@ -90,7 +91,7 @@ function refreshViews() {
 //  NAVIGATION
 // ═══════════════════════════════════════
 function navigate(screen) {
-  if (needsAuth(screen) && !EMP.length) {
+  if (needsAuth(screen) && !S.authenticated) {
     S.pendingScreen = screen;
     openPasswordGate();
     return;
@@ -135,7 +136,7 @@ function openPasswordGate() {
 function closePasswordGate() {
   const modal = document.getElementById('pw-modal');
   const err = document.getElementById('pw-error');
-  if (!EMP.length) {
+  if (!S.authenticated) {
     if (err) err.textContent = '인증 후 이용할 수 있습니다.';
     return;
   }
@@ -150,6 +151,11 @@ async function apiRequest(url, options = {}) {
     ...options,
   });
   const data = await res.json().catch(() => ({}));
+  if (res.status === 401 && S.authenticated) {
+    // 세션 만료: 인증 상태를 내리고 다시 잠금 화면을 띄운다
+    S.authenticated = false;
+    openPasswordGate();
+  }
   if (!res.ok) throw new Error(data.error || '요청 처리 중 오류가 발생했습니다.');
   return data;
 }
@@ -170,6 +176,7 @@ async function submitPasswordGate() {
   }
   try {
     await apiRequest('/api/login', { method: 'POST', body: JSON.stringify({ password: val }) });
+    S.authenticated = true;
     await loadEmployees();
   } catch (e) {
     if (err) err.textContent = e.message;
@@ -240,29 +247,30 @@ function renderHeader() {
   const depts = document.getElementById('kpi-depts');
   if (depts) depts.textContent = [...new Set(EMP.map(e => e.team))].length + '개 팀';
 
-  const avgMs = EMP.reduce((s, e) => s + (TODAY - new Date(e.joinDate)), 0) / EMP.length;
-  const avgY  = avgMs / (365.25 * 24 * 3600 * 1000);
+  const n = EMP.length;
+  const avgY  = n ? EMP.reduce((s, e) => s + (TODAY - new Date(e.joinDate)), 0) / n / (365.25 * 24 * 3600 * 1000) : 0;
   const kpiAvg = document.getElementById('kpi-avg');
   if (kpiAvg) kpiAvg.innerHTML = `<span style="font-size:22px;font-weight:700;color:#F46600">${avgY.toFixed(1)}</span><span style="font-size:13px;color:#8080AA">년</span>`;
 
   const male = EMP.filter(e => e.gender === '남').length;
+  const pct = part => n ? Math.round(part / n * 100) : 0;
   const malePct = document.getElementById('kpi-male-pct');
-  if (malePct) malePct.textContent = Math.round(male / EMP.length * 100) + '%';
+  if (malePct) malePct.textContent = pct(male) + '%';
   const femalePct = document.getElementById('kpi-female-pct');
-  if (femalePct) femalePct.textContent = Math.round((EMP.length - male) / EMP.length * 100) + '%';
+  if (femalePct) femalePct.textContent = pct(n - male) + '%';
   const retire = document.getElementById('kpi-retire');
   if (retire) retire.textContent = EMP.filter(e => calcAge(e.birthYear) >= 53).length + '명';
 
   const stTotal = document.getElementById('st-total');
-  if (stTotal) stTotal.textContent = EMP.length;
+  if (stTotal) stTotal.textContent = n;
   const stMale = document.getElementById('st-male');
   if (stMale) stMale.textContent = male;
   const stMaleU = document.getElementById('st-male-u');
-  if (stMaleU) stMaleU.textContent = `명 (${Math.round(male / EMP.length * 100)}%)`;
+  if (stMaleU) stMaleU.textContent = `명 (${pct(male)}%)`;
   const stFemale = document.getElementById('st-female');
-  if (stFemale) stFemale.textContent = EMP.length - male;
+  if (stFemale) stFemale.textContent = n - male;
   const stFemaleU = document.getElementById('st-female-u');
-  if (stFemaleU) stFemaleU.textContent = `명 (${Math.round((EMP.length - male) / EMP.length * 100)}%)`;
+  if (stFemaleU) stFemaleU.textContent = `명 (${pct(n - male)}%)`;
 }
 
 // ═══════════════════════════════════════
@@ -795,7 +803,7 @@ function initCharts() {
         type: 'doughnut',
         data: { labels: ['남성', '여성'], datasets: [{ data: [mc, EMP.length - mc], backgroundColor: ['#5B9BD5', '#E84D8A'], borderWidth: 2, borderColor: '#1A1A24' }] },
         plugins: [DL],
-        options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'bottom', labels: { generateLabels(chart) { const d = chart.data; return d.labels.map((lbl, i) => ({ text: `${lbl}  ${d.datasets[0].data[i]}명 (${Math.round(d.datasets[0].data[i]/EMP.length*100)}%)`, fillStyle: d.datasets[0].backgroundColor[i], strokeStyle: '#1A1A24', lineWidth: 2, hidden: false, index: i, fontColor: '#C0C0D8' })); }, color: '#C0C0D8', font: { family: "'Noto Sans KR',sans-serif", size: 10 }, padding: 14, boxWidth: 10 } } } },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'bottom', labels: { generateLabels(chart) { const d = chart.data; return d.labels.map((lbl, i) => ({ text: `${lbl}  ${d.datasets[0].data[i]}명 (${EMP.length ? Math.round(d.datasets[0].data[i]/EMP.length*100) : 0}%)`, fillStyle: d.datasets[0].backgroundColor[i], strokeStyle: '#1A1A24', lineWidth: 2, hidden: false, index: i, fontColor: '#C0C0D8' })); }, color: '#C0C0D8', font: { family: "'Noto Sans KR',sans-serif", size: 10 }, padding: 14, boxWidth: 10 } } } },
       });
     }
 
@@ -1019,6 +1027,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     const session = await apiRequest('/api/session');
     if (session.authenticated) {
+      S.authenticated = true;
       await loadEmployees();
       activateScreen('dashboard');
       return;
@@ -1028,5 +1037,5 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 window.addEventListener('pagehide', () => {
-  if (EMP.length) navigator.sendBeacon('/api/logout');
+  if (S.authenticated) navigator.sendBeacon('/api/logout');
 });
