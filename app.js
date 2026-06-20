@@ -273,7 +273,7 @@ function renderRecent() {
   if (!tbody) return;
   const recent = [...EMP].sort((a, b) => b.joinDate.localeCompare(a.joinDate)).slice(0, 5);
   tbody.innerHTML = recent.map(e => `
-    <tr onclick="openDetail('${esc(e.empNo)}')">
+    <tr data-click="openDetail" data-empno="${esc(e.empNo)}">
       <td><div style="display:flex;align-items:center;gap:8px">${av(e.name, 24)}<span style="color:#C0C0D8;font-weight:500">${esc(e.name)}</span></div></td>
       <td>${esc(e.team)}</td>
       <td>${gtag(e.grade)}</td>
@@ -295,7 +295,7 @@ function renderEmpList() {
     const gc = e.gender === '남' ? '#5B9BD5' : '#E84D8A';
     const isSpec = e.pos === '전문직무직원';
     const db = isSpec ? `<span class="db s">${esc(e.pos)}</span>` : '';
-    return `<tr ondblclick="openDetail('${esc(e.empNo)}')">
+    return `<tr data-dblclick="openDetail" data-empno="${esc(e.empNo)}">
       <td class="c" style="color:#9090B4">${i + 1}</td>
       <td style="color:#B8B8D4">${esc(e.dept)}</td>
       <td style="color:#B8B8D4">${esc(e.team)}</td>
@@ -321,8 +321,8 @@ function renderEmpList() {
       <td class="edu-col" style="color:#A8A8C4">${esc(e.etc) || '-'}</td>
       <td class="row-actions">
         <div class="row-actions-inner">
-          <button class="row-act edit" onclick="openEditFromList('${esc(e.empNo)}', event)" title="직원정보 수정">수정</button>
-          <button class="row-act del" onclick="deleteEmployee('${esc(e.empNo)}', event)" title="직원 삭제">삭제</button>
+          <button class="row-act edit" data-click="openEditFromList" data-empno="${esc(e.empNo)}" title="직원정보 수정">수정</button>
+          <button class="row-act del" data-click="deleteEmployee" data-empno="${esc(e.empNo)}" title="직원 삭제">삭제</button>
         </div>
       </td>
     </tr>`;
@@ -407,7 +407,7 @@ function renderDetail() {
       <div class="det-sec" style="color:#9090BC">기타 정보</div>
       <div class="det-row"><span class="det-lbl">특이사항</span><span class="det-val">${esc(emp.etc) || '-'}</span></div>
       <div class="det-acts">
-        <button class="act-btn p" onclick="openEdit()">정보 수정</button>
+        <button class="act-btn p" data-click="openEdit">정보 수정</button>
       </div>
     </div>`;
 }
@@ -539,8 +539,8 @@ function renderEmployeeForm(emp, mode) {
         ${full('ef-etc', '특이사항', emp.etc)}
       </div>
       <div class="det-acts" style="margin-top:16px">
-        <button class="act-btn s" onclick="cancelEdit()">취소</button>
-        <button class="act-btn p" onclick="saveEmployeeForm()">${mode === 'add' ? '추가' : '저장'}</button>
+        <button class="act-btn s" data-click="cancelEdit">취소</button>
+        <button class="act-btn p" data-click="saveEmployeeForm">${mode === 'add' ? '추가' : '저장'}</button>
       </div>
     </div>`;
 }
@@ -976,6 +976,41 @@ function importCSV(input) {
   };
   reader.readAsText(file, 'utf-8');
 }
+
+// ═══════════════════════════════════════
+//  EVENT DELEGATION (CSP: 인라인 핸들러 제거 → script-src 'self')
+// ═══════════════════════════════════════
+const ACTIONS = {
+  navigate: el => navigate(el.dataset.screen || el.dataset.arg),
+  filter: () => doFilter(),
+  openAdd: () => openAdd(),
+  toggleEduCols: () => toggleEduCols(),
+  downloadTemplate: () => downloadTemplate(),
+  exportCSV: () => exportCSV(),
+  importCSV: el => importCSV(el),
+  openDetail: el => openDetail(el.dataset.empno),
+  openEditFromList: (el, ev) => openEditFromList(el.dataset.empno, ev),
+  deleteEmployee: (el, ev) => deleteEmployee(el.dataset.empno, ev),
+  openEdit: () => openEdit(),
+  cancelEdit: () => cancelEdit(),
+  saveEmployeeForm: () => saveEmployeeForm(),
+  closePasswordGate: () => closePasswordGate(),
+  submitPasswordGate: () => submitPasswordGate(),
+  handlePasswordKey: (el, ev) => handlePasswordKey(ev),
+};
+
+function delegate(type) {
+  return ev => {
+    const el = ev.target.closest(`[data-${type}]`);
+    if (!el) return;
+    const fn = ACTIONS[el.dataset[type]];
+    if (fn) fn(el, ev);
+  };
+}
+
+['click', 'dblclick', 'change', 'input', 'keydown'].forEach(type => {
+  document.addEventListener(type, delegate(type));
+});
 
 // ═══════════════════════════════════════
 //  BOOT

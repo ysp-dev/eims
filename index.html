@@ -21,21 +21,21 @@
     </div>
   </div>
   <nav class="sb-nav">
-    <button class="nav-btn active" data-screen="dashboard" onclick="navigate('dashboard')">
+    <button class="nav-btn active" data-screen="dashboard" data-click="navigate">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
       <span>대시보드</span>
     </button>
     <div class="nav-sec">직원 관리</div>
-    <button class="nav-btn" data-screen="emplist" onclick="navigate('emplist')">
+    <button class="nav-btn" data-screen="emplist" data-click="navigate">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       <span>직원 목록</span>
     </button>
     <div class="nav-sec">현황 분석</div>
-    <button class="nav-btn" data-screen="dept" onclick="navigate('dept')">
+    <button class="nav-btn" data-screen="dept" data-click="navigate">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       <span>팀별 현황</span>
     </button>
-    <button class="nav-btn" data-screen="stats" onclick="navigate('stats')">
+    <button class="nav-btn" data-screen="stats" data-click="navigate">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       <span>통계 분석</span>
     </button>
@@ -115,7 +115,7 @@
             <div style="font-size:12px;font-weight:600;color:#A0A0C0">최근 입행 직원</div>
             <div style="font-size:11px;color:#6C6C90;margin-top:2px">입행일 기준 최근 5명</div>
           </div>
-          <button class="view-all" onclick="navigate('emplist')">전체 보기 →</button>
+          <button class="view-all" data-click="navigate" data-arg="emplist">전체 보기 →</button>
         </div>
         <table><thead><tr><th>성명</th><th>팀</th><th>직급</th><th>입행일</th><th>근속기간</th></tr></thead>
         <tbody id="recent-tbody"></tbody></table>
@@ -127,9 +127,9 @@
       <div class="filter-bar">
         <div class="srch-wrap">
           <svg class="srch-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#484860" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" class="srch-inp" id="srch" placeholder="이름, 직원번호, 부서, 팀 검색..." oninput="doFilter()">
+          <input type="text" class="srch-inp" id="srch" placeholder="이름, 직원번호, 부서, 팀 검색..." data-input="filter">
         </div>
-        <select class="flt-sel" id="flt-team" onchange="doFilter()">
+        <select class="flt-sel" id="flt-team" data-change="filter">
           <option value="all">전체 팀</option>
           <option value="여신심사팀">여신심사팀</option>
           <option value="여신업무팀">여신업무팀</option>
@@ -138,7 +138,7 @@
           <option value="외환팀">외환팀</option>
           <option value="PPR팀">PPR팀</option>
         </select>
-        <select class="flt-sel" id="flt-grade" onchange="doFilter()">
+        <select class="flt-sel" id="flt-grade" data-change="filter">
           <option value="all">전체 직급</option>
           <option value="L4">L4</option>
           <option value="L3">L3</option>
@@ -148,29 +148,29 @@
           <option value="L2대우">L2대우</option>
           <option value="L1대우">L1대우</option>
         </select>
-        <select class="flt-sel" id="flt-gender" onchange="doFilter()">
+        <select class="flt-sel" id="flt-gender" data-change="filter">
           <option value="all">전체 성별</option>
           <option value="남">남성</option>
           <option value="여">여성</option>
         </select>
         <div class="flt-cnt">총 <span id="flt-count">0</span>명</div>
-        <button class="add-emp-btn" onclick="openAdd()" title="직원 추가">
+        <button class="add-emp-btn" data-click="openAdd" title="직원 추가">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
           직원 추가
         </button>
-        <button class="edu-toggle-btn" id="edu-toggle-btn" onclick="toggleEduCols()">학력/기타 <span id="edu-toggle-icon">▶</span></button>
+        <button class="edu-toggle-btn" id="edu-toggle-btn" data-click="toggleEduCols">학력/기타 <span id="edu-toggle-icon">▶</span></button>
         <div class="io-sep"></div>
         <div class="io-group">
-          <button class="io-btn" onclick="downloadTemplate()" title="빈 양식 CSV 다운로드">
+          <button class="io-btn" data-click="downloadTemplate" title="빈 양식 CSV 다운로드">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
             템플릿
           </button>
           <label class="io-btn" title="CSV 파일로 직원 데이터 가져오기">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
             가져오기
-            <input type="file" id="import-file" accept=".csv" style="display:none" onchange="importCSV(this)">
+            <input type="file" id="import-file" accept=".csv" style="display:none" data-change="importCSV">
           </label>
-          <button class="io-btn io-export" onclick="exportCSV()" title="현재 직원 데이터를 CSV로 내보내기">
+          <button class="io-btn io-export" data-click="exportCSV" title="현재 직원 데이터를 CSV로 내보내기">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
             내보내기
           </button>
@@ -195,7 +195,7 @@
 
     <!-- ══ EMPLOYEE DETAIL ══ -->
     <div id="screen-detail" class="screen">
-      <button class="back-btn" onclick="navigate('emplist')">
+      <button class="back-btn" data-click="navigate" data-arg="emplist">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
         목록으로 돌아가기
       </button>
@@ -253,11 +253,11 @@
     </div>
     <div class="pw-title" id="pw-title">EIMS 보안 인증</div>
     <div class="pw-sub">서버 인증 후 직원 데이터를 불러옵니다. 영문, 숫자, 기호를 조합한 비밀번호를 입력해 주세요.</div>
-    <input id="pw-input" class="pw-input" type="password" autocomplete="current-password" onkeydown="handlePasswordKey(event)" placeholder="비밀번호">
+    <input id="pw-input" class="pw-input" type="password" autocomplete="current-password" data-keydown="handlePasswordKey" placeholder="비밀번호">
     <div class="pw-error" id="pw-error"></div>
     <div class="pw-actions">
-      <button class="pw-btn s" onclick="closePasswordGate()">취소</button>
-      <button class="pw-btn p" onclick="submitPasswordGate()">확인</button>
+      <button class="pw-btn s" data-click="closePasswordGate">취소</button>
+      <button class="pw-btn p" data-click="submitPasswordGate">확인</button>
     </div>
   </div>
 </div>

@@ -77,7 +77,7 @@ function securityHeaders() {
     'X-Frame-Options': 'DENY',
     'Referrer-Policy': 'no-referrer',
     'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',
-    'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'",
+    'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
   };
 }
 
