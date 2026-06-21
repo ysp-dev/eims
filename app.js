@@ -320,8 +320,75 @@ function filtered() {
   });
 }
 
+const GRADE_ORDER = { 'L4': 4, 'L3': 3, 'L2': 2, 'L1': 1, 'L3대우': 3, 'L2대우': 2, 'L1대우': 1 };
+
+// 헤더 클릭 정렬 키 → 값 추출기/타입 (num은 수치, str은 한글 로케일 문자열 비교)
+const SORT_COLS = {
+  dept:         { type: 'str', get: e => e.dept },
+  team:         { type: 'str', get: e => e.team },
+  name:         { type: 'str', get: e => e.name },
+  empNo:        { type: 'num', get: e => Number(e.empNo) || 0 },
+  pos:          { type: 'str', get: e => e.pos },
+  grade:        { type: 'num', get: e => GRADE_ORDER[e.grade] || 0 },
+  title:        { type: 'str', get: e => e.title },
+  joinDate:     { type: 'str', get: e => e.joinDate || '' },
+  tenure:       { type: 'num', get: e => new Date(e.joinDate).getTime() || 0 },
+  birthYear:    { type: 'num', get: e => Number(e.birthYear) || 0 },
+  age:          { type: 'num', get: e => Number(calcAge(e.birthYear)) || 0 },
+  birth:        { type: 'str', get: e => e.birth || '' },
+  gender:       { type: 'str', get: e => e.gender },
+  gradeUpDate:  { type: 'str', get: e => e.gradeUpDate || '' },
+  gradeLevel:   { type: 'num', get: e => Number(e.gradeLevel) || 0 },
+  gradeSetDate: { type: 'str', get: e => e.gradeSetDate || '' },
+  gradeNextDate:{ type: 'str', get: e => e.gradeNextDate || '' },
+  preSchool:    { type: 'str', get: e => e.preSchool || '' },
+  preMajor:     { type: 'str', get: e => e.preMajor || '' },
+  postSchool:   { type: 'str', get: e => e.postSchool || '' },
+  postMajor:    { type: 'str', get: e => e.postMajor || '' },
+  etc:          { type: 'str', get: e => e.etc || '' },
+};
+
+// 사용자가 클릭한 순서대로 누적되는 정렬 기준 [{key, dir}] (배열 순서 = 정렬 우선순위)
+let sortState = [];
+
+// 헤더 클릭: 미정렬→오름차순 추가, 오름차순→내림차순, 내림차순→해제(3번째 클릭)
+function toggleSort(key) {
+  if (!SORT_COLS[key]) return;
+  const i = sortState.findIndex(s => s.key === key);
+  if (i < 0) sortState.push({ key, dir: 'asc' });
+  else if (sortState[i].dir === 'asc') sortState[i].dir = 'desc';
+  else sortState.splice(i, 1);
+  renderEmpList();
+}
+
+function userSortCmp(a, b) {
+  for (const { key, dir } of sortState) {
+    const col = SORT_COLS[key];
+    if (!col) continue;
+    const va = col.get(a), vb = col.get(b);
+    const c = col.type === 'num' ? (va - vb) : String(va).localeCompare(String(vb), 'ko');
+    if (c) return dir === 'desc' ? -c : c;
+  }
+  return 0;
+}
+
+// 헤더 ::after 정렬 표시(▲/▼ + 다중정렬 시 우선순위 번호) 갱신
+function updateSortIndicators() {
+  document.querySelectorAll('#emp-table th[data-sort]').forEach(th => {
+    const i = sortState.findIndex(s => s.key === th.dataset.sort);
+    if (i < 0) { th.removeAttribute('data-ind'); th.classList.remove('sort-active'); return; }
+    const arrow = sortState[i].dir === 'asc' ? '▲' : '▼';
+    th.dataset.ind = ` ${arrow}${sortState.length > 1 ? i + 1 : ''}`;
+    th.classList.add('sort-active');
+  });
+}
+
 function sortEmpList(list) {
-  const GO = { 'L4': 4, 'L3': 3, 'L2': 2, 'L1': 1, 'L3대우': 3, 'L2대우': 2, 'L1대우': 1 };
+  // 사용자가 헤더로 지정한 정렬이 있으면 그 기준(클릭 순서 우선)을 따른다
+  if (sortState.length) return [...list].sort(userSortCmp);
+
+  // 기본 정렬: 부장 → 일반 → 전문직무직원, 각 그룹은 직급/등급 기준
+  const GO = GRADE_ORDER;
   const cmp = (a, b) => {
     const gd = (GO[b.grade] || 0) - (GO[a.grade] || 0);
     if (gd) return gd;
@@ -428,6 +495,7 @@ function renderEmpList() {
       </td>
     </tr>`;
   }).join('');
+  updateSortIndicators();
 }
 
 function toggleEduCols() {
@@ -1125,6 +1193,7 @@ const ACTIONS = {
   submitChangePw: () => submitChangePw(),
   handleChangePwKey: (el, ev) => handleChangePwKey(el, ev),
   logout: () => doLogout(),
+  sortBy: el => toggleSort(el.dataset.sort),
 };
 
 function delegate(type) {

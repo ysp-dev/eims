@@ -60,6 +60,10 @@ table{width:100%;border-collapse:collapse}
 thead tr{background:rgba(255,255,255,.015)}
 th{padding:8px 16px;text-align:left;font-size:11px;color:#6C6C90;font-weight:600;white-space:nowrap}
 th.c{text-align:center}
+th.sortable{cursor:pointer;user-select:none}
+th.sortable:hover{color:#B8B8D8}
+th.sort-active{color:#FFBC00}
+th[data-ind]::after{content:attr(data-ind);font-size:9px;color:#FFBC00;font-weight:700}
 .full-tbl th{padding:9px 13px}
 .full-tbl td{padding:10px 13px;white-space:nowrap}
 td{padding:10px 16px;font-size:11px;color:#9090BC}
@@ -148,7 +152,7 @@ tbody tr:hover .row-actions{background:#1E1E29}
 .edt-inp:focus{outline:none;border-color:#FFBC00;background:#0A0A12}
 select.edt-inp{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236C6C90'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:26px;cursor:pointer}
 
-/* ── 학력/기타 컬럼 토글 ── */
+/* ── 추가정보 컬럼 토글 ── */
 .edu-hidden .edu-col{display:none}
 .edu-toggle-btn{padding:4px 10px;background:rgba(144,144,188,.08);border:1px solid rgba(144,144,188,.2);color:#9090BC;font-size:11px;font-family:'Noto Sans KR',sans-serif;border-radius:6px;cursor:pointer;white-space:nowrap;transition:background .15s}
 .edu-toggle-btn:hover{background:rgba(144,144,188,.15)}

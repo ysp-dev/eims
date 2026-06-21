@@ -134,7 +134,7 @@
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
           직원 추가
         </button>
-        <button class="edu-toggle-btn" id="edu-toggle-btn" data-click="toggleEduCols">학력/기타 <span id="edu-toggle-icon">▶</span></button>
+        <button class="edu-toggle-btn" id="edu-toggle-btn" data-click="toggleEduCols">추가정보 <span id="edu-toggle-icon">▶</span></button>
         <div class="io-sep"></div>
         <div class="io-group">
           <button class="io-btn" data-click="downloadTemplate" title="빈 양식 CSV 다운로드">
@@ -156,11 +156,29 @@
         <div class="tbl-scroll">
           <table id="emp-table" class="edu-hidden">
             <thead><tr>
-              <th class="c">No</th><th>부서</th><th>팀</th><th>성명</th><th>직원번호</th>
-              <th>직위</th><th class="c">직급</th><th>호칭</th><th>입행일</th><th>근속기간</th>
-              <th class="c">출생년도</th><th class="c">나이(만)</th><th>생년월일</th><th class="c">성별</th>
-              <th>현직급승격일</th><th class="c">등급</th><th>현등급책정일</th><th>차기등급일</th>
-              <th class="edu-col">입행전학교명</th><th class="edu-col">입행전전공</th><th class="edu-col">입행후학교명</th><th class="edu-col">입행후전공</th><th class="edu-col">기타</th>
+              <th class="c">No</th>
+              <th class="sortable" data-click="sortBy" data-sort="dept">부서</th>
+              <th class="sortable" data-click="sortBy" data-sort="team">팀</th>
+              <th class="sortable" data-click="sortBy" data-sort="name">성명</th>
+              <th class="sortable" data-click="sortBy" data-sort="empNo">직원번호</th>
+              <th class="sortable" data-click="sortBy" data-sort="pos">직위</th>
+              <th class="c sortable" data-click="sortBy" data-sort="grade">직급</th>
+              <th class="sortable" data-click="sortBy" data-sort="title">호칭</th>
+              <th class="sortable" data-click="sortBy" data-sort="joinDate">입행일</th>
+              <th class="sortable" data-click="sortBy" data-sort="tenure">근속기간</th>
+              <th class="c sortable" data-click="sortBy" data-sort="birthYear">출생년도</th>
+              <th class="c sortable" data-click="sortBy" data-sort="age">나이(만)</th>
+              <th class="sortable" data-click="sortBy" data-sort="birth">생년월일</th>
+              <th class="c sortable" data-click="sortBy" data-sort="gender">성별</th>
+              <th class="sortable" data-click="sortBy" data-sort="gradeUpDate">현직급승격일</th>
+              <th class="c sortable" data-click="sortBy" data-sort="gradeLevel">등급</th>
+              <th class="sortable" data-click="sortBy" data-sort="gradeSetDate">현등급책정일</th>
+              <th class="sortable" data-click="sortBy" data-sort="gradeNextDate">차기등급일</th>
+              <th class="edu-col sortable" data-click="sortBy" data-sort="preSchool">입행전학교명</th>
+              <th class="edu-col sortable" data-click="sortBy" data-sort="preMajor">입행전전공</th>
+              <th class="edu-col sortable" data-click="sortBy" data-sort="postSchool">입행후학교명</th>
+              <th class="edu-col sortable" data-click="sortBy" data-sort="postMajor">입행후전공</th>
+              <th class="edu-col sortable" data-click="sortBy" data-sort="etc">기타</th>
               <th class="c">관리</th>
             </tr></thead>
             <tbody id="emp-tbody"></tbody>
