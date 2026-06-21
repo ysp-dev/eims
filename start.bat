@@ -67,7 +67,7 @@ echo Starting eims server...
 echo URL: %APP_URL%
 echo.
 
-start "eims Server" /min "%NODE_EXE%" "%CD%\server.js"
+start "eims Server" /min "%NODE_EXE%" --env-file=.env "%CD%\server.js"
 
 timeout /t 3 /nobreak >nul
 
