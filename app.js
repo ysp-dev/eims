@@ -130,7 +130,7 @@ function activateScreen(screen) {
   if (screen === 'dashboard') { renderHeader(); renderDept(); }
   if (screen === 'emplist') { sortState = []; renderEmpList(); }
   if (screen === 'detail') renderDetail();
-  if (screen === 'stats')  { renderHeader(); renderStatLists(); }
+  if (screen === 'stats')  { renderHeader(); renderStatLists(); ['age','tenure','level','dd'].forEach(k => { charts[k]?.destroy?.(); delete charts[k]; }); }
   initCharts();
 }
 
@@ -464,10 +464,11 @@ function renderStatLists() {
       retireEl.innerHTML = '<div style="text-align:center;color:#5C5C88;font-size:12px;padding:20px 0">해당 직원 없음</div>';
     } else {
       retireEl.innerHTML = `<table style="width:100%;border-collapse:collapse">
-        <thead><tr>${TH('성명')}${TH('팀')}${TH('직위')}${TH('호칭')}${TH('만나이')}</tr></thead>
+        <thead><tr>${TH('성명')}${TH('팀')}${TH('직위')}${TH('호칭')}${TH('생년월일')}${TH('만나이')}</tr></thead>
         <tbody>${retireList.map(e => `<tr style="${ROW_STYLE}">
           ${TD(e.name, 'color:#E0E0F0;font-weight:500')}
           ${TD(e.team)}${TD(e.pos)}${TD(e.title)}
+          ${TD(e.birth || '-')}
           ${TD(calcAge(e.birthYear, e.birth) + '세', 'color:#FFBC00;font-weight:600')}
         </tr>`).join('')}</tbody>
       </table>`;
@@ -945,16 +946,18 @@ const BS = {
 // 인라인 데이터 레이블 플러그인 (외부 라이브러리 불필요)
 const DL = {
   id: 'dl',
-  afterDatasetsDraw(chart) {
+  afterDatasetsDraw(chart, args, pluginOpts) {
     const { ctx } = chart;
     const isHoriz   = chart.options.indexAxis === 'y';
     const isStacked = !!chart.options.scales?.y?.stacked;
+    const fmt = pluginOpts?.formatter;
     chart.data.datasets.forEach((ds, i) => {
       const meta = chart.getDatasetMeta(i);
       if (meta.hidden) return;
       meta.data.forEach((el, j) => {
-        const val = ds.data[j];
-        if (val == null || val === 0) return;
+        const raw = ds.data[j];
+        if (raw == null || raw === 0) return;
+        const val = fmt ? fmt(raw, chart, i, j) : raw;
 
         // 도넛/파이: ArcElement는 startAngle 속성 보유
         if (el.startAngle !== undefined) {
@@ -1086,7 +1089,13 @@ function initCharts() {
         },
         options: {
           responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { labels: { color: '#8080A0', font: { family: "'Noto Sans KR',sans-serif", size: 10 }, padding: 14, boxWidth: 12 } } },
+          plugins: {
+            legend: { labels: { color: '#8080A0', font: { family: "'Noto Sans KR',sans-serif", size: 10 }, padding: 14, boxWidth: 12 } },
+            dl: { formatter: (v, chart, di, ji) => {
+              const total = chart.data.datasets.reduce((s, d) => s + (d.data[ji] || 0), 0);
+              return total ? `${v} (${Math.round(v/total*100)}%)` : `${v}`;
+            }},
+          },
           scales: {
             x: { stacked: true, grid: { display: false }, ticks: TK, border: { color: 'transparent' } },
             y: { stacked: true, ...BS.y },
@@ -1108,10 +1117,11 @@ function initCharts() {
     });
     const e5 = document.getElementById('c-age');
     if (e5 && !charts.age) {
+      const pctFmt = (v) => { const n = EMP.length; return n ? `${v}명 (${Math.round(v/n*100)}%)` : `${v}명`; };
       charts.age = new C(e5, {
         type: 'bar',
-        data: { labels: Object.keys(ab), datasets: [{ data: Object.values(ab), backgroundColor: ['#3F3F52', '#545860', '#FFBC00', '#F46600'], borderWidth: 0, borderRadius: 4 }] },
-        options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 18 } }, plugins: { legend: { display: false } }, scales: BS },
+        data: { labels: Object.keys(ab), datasets: [{ data: Object.values(ab), backgroundColor: ['#4E82C2', '#4EAF72', '#FFBC00', '#E63946'], borderWidth: 0, borderRadius: 4 }] },
+        options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 18 } }, plugins: { legend: { display: false }, dl: { formatter: pctFmt } }, scales: BS },
         plugins: [DL],
       });
     }
@@ -1127,10 +1137,11 @@ function initCharts() {
     });
     const e6 = document.getElementById('c-tenure');
     if (e6 && !charts.tenure) {
+      const pctFmt = (v) => { const n = EMP.length; return n ? `${v}명 (${Math.round(v/n*100)}%)` : `${v}명`; };
       charts.tenure = new C(e6, {
         type: 'bar',
-        data: { labels: Object.keys(tb), datasets: [{ data: Object.values(tb), backgroundColor: '#E63946', borderWidth: 0, borderRadius: 4 }] },
-        options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 18 } }, plugins: { legend: { display: false } }, scales: BS },
+        data: { labels: Object.keys(tb), datasets: [{ data: Object.values(tb), backgroundColor: ['#4E82C2', '#4EAF72', '#FFBC00', '#F46600', '#E63946'], borderWidth: 0, borderRadius: 4 }] },
+        options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 18 } }, plugins: { legend: { display: false }, dl: { formatter: pctFmt } }, scales: BS },
         plugins: [DL],
       });
     }
@@ -1141,10 +1152,11 @@ function initCharts() {
     const e7 = document.getElementById('c-level');
     if (e7 && !charts.level) {
       const lc = ['#0066FF', '#E63946', '#F9A825', '#8080A0', '#7C4DFF'];
+      const pctFmt = (v) => { const n = EMP.length; return n ? `${v}명 (${Math.round(v/n*100)}%)` : `${v}명`; };
       charts.level = new C(e7, {
         type: 'bar',
         data: { labels: lk, datasets: [{ data: lk.map(l => lv[l]), backgroundColor: lk.map((_, i) => lc[i % lc.length]), borderWidth: 0, borderRadius: 4 }] },
-        options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 18 } }, plugins: { legend: { display: false } }, scales: BS },
+        options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 18 } }, plugins: { legend: { display: false }, dl: { formatter: pctFmt } }, scales: BS },
         plugins: [DL],
       });
     }

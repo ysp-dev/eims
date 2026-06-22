@@ -3,6 +3,10 @@ body{margin:0;font-family:'Noto Sans KR',sans-serif;background:#0F0F14;color:#ff
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:#13131B}
 ::-webkit-scrollbar-thumb{background:#2A2A3E;border-radius:3px}
+.tbl-scroll::-webkit-scrollbar{height:8px}
+.tbl-scroll::-webkit-scrollbar-track{background:#1A1A24}
+.tbl-scroll::-webkit-scrollbar-thumb{background:#3A3A5A;border-radius:4px}
+.tbl-scroll::-webkit-scrollbar-thumb:hover{background:#5A5A7A}
 input::placeholder{color:#8080AA;font-family:'Noto Sans KR',sans-serif}
 select option{background:#1A1A24;color:#D0D0E8}
 @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
