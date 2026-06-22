@@ -71,7 +71,7 @@ echo Starting eims server...
 echo URL: http://localhost:%PORT%
 echo.
 
-start "eims Server" /min "%NODE_EXE%" "%CD%\server.js"
+start "eims Server" /b "%NODE_EXE%" "%CD%\server.js"
 
 timeout /t 3 /nobreak >nul
 
