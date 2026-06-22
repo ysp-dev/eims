@@ -24,9 +24,14 @@ function esc(v) {
   ));
 }
 
-function calcAge(by) {
+function calcAge(by, birth) {
   const n = Number(by);
-  return n ? TODAY.getFullYear() - n : '-';
+  if (!n) return '-';
+  const age = TODAY.getFullYear() - n;
+  const m = birth && /^(\d{4})-(\d{2})-(\d{2})$/.exec(birth);
+  if (!m) return age;
+  const passed = (TODAY.getMonth() + 1) * 100 + TODAY.getDate() >= Number(m[2]) * 100 + Number(m[3]);
+  return passed ? age : age - 1;
 }
 
 function calcYears(d) {
@@ -54,6 +59,15 @@ const GI = {
 };
 function gi(g) { return GI[g] || GI['L1']; }
 
+const TEAM_ORDER = ['여신심사팀', '여신업무팀', '여신관리팀', '외환팀', '상품/신용평가팀', 'PPR팀'];
+function sortedTeams(emp) {
+  const all = [...new Set(emp.map(e => e.team))];
+  return all.sort((a, b) => {
+    const ia = TEAM_ORDER.indexOf(a), ib = TEAM_ORDER.indexOf(b);
+    if (ia === -1 && ib === -1) return a.localeCompare(b, 'ko');
+    return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+  });
+}
 const DASH_TEAM_COLORS = ['#D05C6F', '#D98545', '#4EAF72', '#4E82C2', '#8A63C7', '#42B3AD'];
 const DASH_GRADE_COLORS = {
   'L4': '#4F86D6',
@@ -114,9 +128,9 @@ function activateScreen(screen) {
   const pt = document.getElementById('page-title');
   if (pt) pt.textContent = titles[screen] || screen;
   if (screen === 'dashboard') { renderHeader(); renderDept(); }
-  if (screen === 'emplist') renderEmpList();
+  if (screen === 'emplist') { sortState = []; renderEmpList(); }
   if (screen === 'detail') renderDetail();
-  if (screen === 'stats')  renderHeader();
+  if (screen === 'stats')  { renderHeader(); renderStatLists(); }
   initCharts();
 }
 
@@ -139,7 +153,13 @@ function closePasswordGate() {
   const modal = document.getElementById('pw-modal');
   const err = document.getElementById('pw-error');
   if (!S.authenticated) {
-    if (err) err.textContent = '인증 후 이용할 수 있습니다.';
+    window.close();
+    setTimeout(() => {
+      if (!window.closed) {
+        const err = document.getElementById('pw-error');
+        if (err) err.textContent = '창을 직접 닫아 주세요.';
+      }
+    }, 300);
     return;
   }
   if (modal) modal.classList.remove('show');
@@ -312,8 +332,8 @@ function filtered() {
   const g  = document.getElementById('flt-grade')?.value || 'all';
   const gn = document.getElementById('flt-gender')?.value || 'all';
   return EMP.filter(e => {
-    if (s && !e.name.includes(s) && !e.empNo.includes(s) && !e.dept.includes(s) && !e.team.includes(s)) return false;
-    if (d  !== 'all' && e.team   !== d)  return false;
+    if (s && !e.name.includes(s) && !e.empNo.includes(s) && !e.team.includes(s) && !e.pos.includes(s) && !String(e.birthYear).includes(s)) return false;
+    if (d  !== 'all' && e.team.replace(/팀$/, '') !== d.replace(/팀$/, ''))  return false;
     if (g  !== 'all' && e.grade  !== g)  return false;
     if (gn !== 'all' && e.gender !== gn) return false;
     return true;
@@ -334,7 +354,7 @@ const SORT_COLS = {
   joinDate:     { type: 'str', get: e => e.joinDate || '' },
   tenure:       { type: 'num', get: e => new Date(e.joinDate).getTime() || 0 },
   birthYear:    { type: 'num', get: e => Number(e.birthYear) || 0 },
-  age:          { type: 'num', get: e => Number(calcAge(e.birthYear)) || 0 },
+  age:          { type: 'num', get: e => Number(calcAge(e.birthYear, e.birth)) || 0 },
   birth:        { type: 'str', get: e => e.birth || '' },
   gender:       { type: 'str', get: e => e.gender },
   gradeUpDate:  { type: 'str', get: e => e.gradeUpDate || '' },
@@ -413,6 +433,65 @@ function sortEmpList(list) {
 function doFilter() { renderEmpList(); }
 
 // ═══════════════════════════════════════
+//  STATS LISTS
+// ═══════════════════════════════════════
+const RETIRE_AGE = 55;
+const RETIRE_NEAR = 2;
+
+function renderStatLists() {
+  const threeYearsAgo = new Date(TODAY.getFullYear() - 3, TODAY.getMonth(), TODAY.getDate());
+
+  const retireList = EMP
+    .filter(e => TODAY.getFullYear() - Number(e.birthYear) >= RETIRE_AGE - RETIRE_NEAR)
+    .sort((a, b) => Number(a.birthYear) - Number(b.birthYear));
+
+  const newList = EMP
+    .filter(e => e.joinDate && new Date(e.joinDate) >= threeYearsAgo)
+    .sort((a, b) => (b.joinDate || '').localeCompare(a.joinDate || ''));
+
+  const ROW_STYLE = 'border-bottom:1px solid rgba(255,255,255,.05)';
+  const TD = (txt, style = '') => `<td style="padding:7px 10px;font-size:11px;color:#B8B8D4;${style}">${esc(String(txt ?? '-'))}</td>`;
+  const TH = (txt) => `<th style="padding:6px 10px;font-size:10px;color:#6C6C90;font-weight:500;text-align:left;border-bottom:1px solid #1E1E2E">${txt}</th>`;
+
+  const retireSub = document.getElementById('st-retire-sub');
+  const newSub    = document.getElementById('st-new-sub');
+  if (retireSub) retireSub.textContent = `만 ${RETIRE_AGE - RETIRE_NEAR}세 이상 · ${retireList.length}명`;
+  if (newSub)    newSub.textContent    = `최근 3년 이내 입행 · ${newList.length}명`;
+
+  const retireEl = document.getElementById('st-retire-list');
+  if (retireEl) {
+    if (!retireList.length) {
+      retireEl.innerHTML = '<div style="text-align:center;color:#5C5C88;font-size:12px;padding:20px 0">해당 직원 없음</div>';
+    } else {
+      retireEl.innerHTML = `<table style="width:100%;border-collapse:collapse">
+        <thead><tr>${TH('성명')}${TH('팀')}${TH('직위')}${TH('호칭')}${TH('만나이')}</tr></thead>
+        <tbody>${retireList.map(e => `<tr style="${ROW_STYLE}">
+          ${TD(e.name, 'color:#E0E0F0;font-weight:500')}
+          ${TD(e.team)}${TD(e.pos)}${TD(e.title)}
+          ${TD(calcAge(e.birthYear, e.birth) + '세', 'color:#FFBC00;font-weight:600')}
+        </tr>`).join('')}</tbody>
+      </table>`;
+    }
+  }
+
+  const newEl = document.getElementById('st-new-list');
+  if (newEl) {
+    if (!newList.length) {
+      newEl.innerHTML = '<div style="text-align:center;color:#5C5C88;font-size:12px;padding:20px 0">해당 직원 없음</div>';
+    } else {
+      newEl.innerHTML = `<table style="width:100%;border-collapse:collapse">
+        <thead><tr>${TH('성명')}${TH('팀')}${TH('직위')}${TH('호칭')}${TH('입행일')}</tr></thead>
+        <tbody>${newList.map(e => `<tr style="${ROW_STYLE}">
+          ${TD(e.name, 'color:#E0E0F0;font-weight:500')}
+          ${TD(e.team)}${TD(e.pos)}${TD(e.title)}
+          ${TD(e.joinDate, 'color:#4EAF72;font-weight:500')}
+        </tr>`).join('')}</tbody>
+      </table>`;
+    }
+  }
+}
+
+// ═══════════════════════════════════════
 //  HEADER / KPI
 // ═══════════════════════════════════════
 function renderHeader() {
@@ -436,7 +515,7 @@ function renderHeader() {
   const femalePct = document.getElementById('kpi-female-pct');
   if (femalePct) femalePct.textContent = pct(n - male) + '%';
   const retire = document.getElementById('kpi-retire');
-  if (retire) retire.textContent = EMP.filter(e => calcAge(e.birthYear) >= 53).length + '명';
+  if (retire) retire.textContent = EMP.filter(e => calcAge(e.birthYear, e.birth) >= 53).length + '명';
 
   const stTotal = document.getElementById('st-total');
   if (stTotal) stTotal.textContent = n;
@@ -475,7 +554,7 @@ function renderEmpList() {
       <td style="color:#A8A8C4">${esc(e.joinDate)}</td>
       <td style="color:#A8A8C4;font-size:11px">${calcYears(e.joinDate)}</td>
       <td class="c" style="color:#A8A8C4">${esc(e.birthYear)}</td>
-      <td class="c" style="color:#A8A8C4">${calcAge(e.birthYear)}세</td>
+      <td class="c" style="color:#A8A8C4">${calcAge(e.birthYear, e.birth)}세</td>
       <td style="color:#A8A8C4">${esc(e.birth)}</td>
       <td class="c" style="color:${gc}">${esc(e.gender)}</td>
       <td style="color:#A8A8C4">${esc(e.gradeUpDate) || '-'}</td>
@@ -546,7 +625,7 @@ function renderDetail() {
     <div class="det-card">
       <div class="det-sec" style="color:#FFBC00">기본 정보</div>
       <div class="det-row"><span class="det-lbl">생년월일</span><span class="det-val">${esc(emp.birth)}</span></div>
-      <div class="det-row"><span class="det-lbl">나이(만)</span><span class="det-val">${calcAge(emp.birthYear)}세</span></div>
+      <div class="det-row"><span class="det-lbl">나이(만)</span><span class="det-val">${calcAge(emp.birthYear, emp.birth)}세</span></div>
       <div class="det-row"><span class="det-lbl">성별</span><span style="font-size:12px;color:${gc};font-weight:500">${emp.gender === '남' ? '남성' : '여성'}</span></div>
       <div class="det-row"><span class="det-lbl">직위</span><span class="det-val">${esc(emp.pos)}</span></div>
       <div class="det-row"><span class="det-lbl">호칭</span><span class="det-val">${esc(emp.title)}</span></div>
@@ -818,7 +897,7 @@ async function deleteEmployee(empNo, ev) {
 //  TEAM STATUS
 // ═══════════════════════════════════════
 function renderDept() {
-  const teams = [...new Set(EMP.map(e => e.team))];
+  const teams = sortedTeams(EMP);
   document.getElementById('dept-cards').innerHTML = teams.map(t => {
     const te     = EMP.filter(e => e.team === t);
     const dept   = te[0].dept;
@@ -941,7 +1020,7 @@ function initCharts() {
 
   if (sc === 'dashboard') {
     const dC = {};
-    EMP.forEach(e => { dC[e.team] = (dC[e.team] || 0) + 1; });
+    sortedTeams(EMP).forEach(t => { dC[t] = EMP.filter(e => e.team === t).length; });
 
     const e1 = document.getElementById('c-dept');
     if (e1 && !charts.dept) {
@@ -991,7 +1070,7 @@ function initCharts() {
   }
 
   if (sc === 'stats') {
-    const teams = [...new Set(EMP.map(e => e.team))];
+    const teams = sortedTeams(EMP);
     const el = document.getElementById('c-dept-detail');
     if (el && !charts.dd) {
       const grades = ['L1', 'L2', 'L3', 'L4'];

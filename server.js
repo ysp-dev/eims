@@ -196,7 +196,11 @@ function requireSession(req, res) {
 }
 
 function loadEmployees() {
-  return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+  try {
+    return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+  } catch (_) {
+    return [];
+  }
 }
 
 function saveEmployees(employees) {
@@ -453,6 +457,6 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000).unref();
 
-server.listen(PORT, '127.0.0.1', () => {
-  console.log(`EIMS server running at http://127.0.0.1:${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`EIMS server running at http://0.0.0.0:${PORT}`);
 });

@@ -9,7 +9,6 @@ if errorlevel 1 (
 )
 
 set "PORT=7000"
-set "APP_URL=http://localhost:7000"
 set "NODE_EXE="
 set "FOUND="
 
@@ -52,6 +51,11 @@ if not exist "%CD%\server.js" (
     exit /b 1
 )
 
+if not exist "%CD%\data" mkdir "%CD%\data"
+if not exist "%CD%\data\employees.json" echo []> "%CD%\data\employees.json"
+
+if not exist "%CD%\data\auth.json" set "EIMS_PASSWORD=0000"
+
 echo Checking port %PORT% before start...
 netstat -ano -p tcp | findstr /C:":%PORT%"
 echo.
@@ -61,13 +65,13 @@ for /f "tokens=5" %%P in ('netstat -ano -p tcp ^| findstr /C:":%PORT%" ^| findst
     echo Server already appears to be running. PID %%P
 )
 
-if defined FOUND goto OPEN_BROWSER
+if defined FOUND goto DONE
 
 echo Starting eims server...
-echo URL: %APP_URL%
+echo URL: http://localhost:%PORT%
 echo.
 
-start "eims Server" /min "%NODE_EXE%" --env-file=.env "%CD%\server.js"
+start "eims Server" /min "%NODE_EXE%" "%CD%\server.js"
 
 timeout /t 3 /nobreak >nul
 
@@ -86,17 +90,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-:OPEN_BROWSER
-echo Opening %APP_URL%
-
-where msedge >nul 2>nul
-if not errorlevel 1 (
-    start "" msedge "%APP_URL%"
-) else (
-    start "" "%APP_URL%"
-)
-
-echo.
+:DONE
 echo Done. Press any key to close this window.
 pause >nul
 
