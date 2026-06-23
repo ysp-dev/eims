@@ -30,6 +30,11 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       <span>직원 목록</span>
     </button>
+    <div class="nav-sec">평가 관리</div>
+    <button class="nav-btn" data-screen="evaluate" data-click="navigate">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      <span>평가하기</span>
+    </button>
     <div class="nav-sec">현황 분석</div>
     <button class="nav-btn" data-screen="stats" data-click="navigate">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
@@ -179,7 +184,6 @@
               <th class="edu-col sortable" data-click="sortBy" data-sort="postSchool">입행후학교명</th>
               <th class="edu-col sortable" data-click="sortBy" data-sort="postMajor">입행후전공</th>
               <th class="edu-col sortable" data-click="sortBy" data-sort="etc">기타</th>
-              <th class="c">관리</th>
             </tr></thead>
             <tbody id="emp-tbody"></tbody>
           </table>
@@ -243,9 +247,123 @@
       </div>
     </div>
 
+    <!-- ══ EVALUATION ══ -->
+    <div id="screen-evaluate" class="screen">
+      <!-- 등급별 목표 비율 설정 -->
+      <div class="eval-ratio-card">
+        <!-- 평가대상 기간 선택 -->
+        <div class="eval-period-row">
+          <span class="eval-period-lbl">평가대상</span>
+          <select class="flt-sel" id="eval-year" data-change="evalPeriodChange">
+            <option value="2025">2025년</option>
+            <option value="2026">2026년</option>
+            <option value="2027">2027년</option>
+          </select>
+          <select class="flt-sel" id="eval-half" data-change="evalPeriodChange">
+            <option value="1">상반기</option>
+            <option value="2">하반기</option>
+          </select>
+        </div>
+        <div class="eval-ratio-head">
+          <div>
+            <div class="ch-title">등급별 목표 비율</div>
+            <div class="ch-sub">전체 <b id="eval-total">0</b>명(부장 제외) 기준 · 등급별 비율(%, 소수점 첫째자리)을 입력하면 인원수가 자동 배분됩니다. 합계는 100%가 되어야 합니다.</div>
+          </div>
+          <div class="eval-ratio-actions">
+            <div class="eval-sum-box">합계 <span id="eval-ratio-sum">0.0</span>% · 할당 <b id="eval-alloc-total">0</b>명</div>
+            <button class="add-emp-btn" data-click="saveEvalRatios">비율 저장</button>
+          </div>
+        </div>
+        <div class="eval-ratio-grid" id="eval-ratio-grid"></div>
+      </div>
+
+      <!-- 평가 입력 -->
+      <div class="filter-bar">
+        <select class="flt-sel" id="eval-flt-team" data-change="evalFilter">
+          <option value="all">전체 팀</option>
+        </select>
+        <div class="flt-cnt">총 <span id="eval-count">0</span>명</div>
+        <div class="eval-save-state" id="eval-save-state"></div>
+        <div class="io-sep"></div>
+        <div class="io-group">
+          <button class="io-btn" data-click="downloadEvalTemplate" title="평가 빈 양식 CSV 다운로드">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+            템플릿
+          </button>
+          <label class="io-btn" title="CSV 파일로 평가 데이터 가져오기">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+            가져오기
+            <input type="file" id="eval-import-file" accept=".csv" style="display:none" data-change="importEvalCSV">
+          </label>
+          <button class="io-btn io-export" data-click="exportEvalCSV" title="현재 평가 데이터를 CSV로 내보내기">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+            내보내기
+          </button>
+        </div>
+        <div class="eval-confirm-status" id="eval-confirm-status"></div>
+        <button class="add-emp-btn eval-confirm-btn" id="eval-confirm-btn" data-click="confirmEvalPeriod">확정하기</button>
+      </div>
+      <div class="tbl-wrap full-tbl">
+        <div class="tbl-scroll">
+          <table id="eval-table">
+            <thead>
+              <tr>
+                <th class="c" rowspan="2">No</th>
+                <th rowspan="2">팀</th>
+                <th rowspan="2">성명</th>
+                <th rowspan="2">직원번호</th>
+                <th class="eval-pos" rowspan="2">직위</th>
+                <th class="c" rowspan="2">직급</th>
+                <th class="c" rowspan="2">(현직급)<br>표창갯수</th>
+                <th class="c" rowspan="2">배수횟수</th>
+                <th class="c eval-yr" colspan="2" data-yr="2025">2025년</th>
+                <th class="c eval-yr" colspan="2" data-yr="2026">2026년</th>
+                <th class="c eval-yr" colspan="2" data-yr="2027">2027년</th>
+              </tr>
+              <tr>
+                <th class="c eval-sub" data-period="2025-H1">상반기</th><th class="c eval-sub" data-period="2025-H2">하반기</th>
+                <th class="c eval-sub" data-period="2026-H1">상반기</th><th class="c eval-sub" data-period="2026-H2">하반기</th>
+                <th class="c eval-sub" data-period="2027-H1">상반기</th><th class="c eval-sub" data-period="2027-H2">하반기</th>
+              </tr>
+            </thead>
+            <tbody id="eval-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /content -->
 </div><!-- /main -->
 </div><!-- /app -->
+
+<div class="pw-modal" id="eval-modal" aria-hidden="true">
+  <div class="pw-card" role="dialog" aria-modal="true" aria-labelledby="eval-modal-title">
+    <div class="pw-icon" style="background:rgba(192,40,47,.08);border-color:rgba(192,40,47,.2)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C0282F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    </div>
+    <div class="pw-title" id="eval-modal-title">검증 불일치</div>
+    <div class="pw-sub" id="eval-modal-msg"></div>
+    <div class="pw-actions">
+      <button class="pw-btn p" data-click="closeEvalModal">확인</button>
+    </div>
+  </div>
+</div>
+
+<div class="pw-modal" id="eval-auth-modal" aria-hidden="true">
+  <div class="pw-card" role="dialog" aria-modal="true" aria-labelledby="eval-auth-title">
+    <div class="pw-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFBC00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </div>
+    <div class="pw-title" id="eval-auth-title">평가하기 인증</div>
+    <div class="pw-sub">평가하기 메뉴는 접속 비밀번호를 한 번 더 입력해야 합니다.</div>
+    <input id="eval-auth-input" class="pw-input" type="password" autocomplete="current-password" data-keydown="handleEvalAuthKey" placeholder="비밀번호">
+    <div class="pw-error" id="eval-auth-error"></div>
+    <div class="pw-actions">
+      <button class="pw-btn s" data-click="closeEvalAuth">취소</button>
+      <button class="pw-btn p" data-click="submitEvalAuth">확인</button>
+    </div>
+  </div>
+</div>
 
 <div class="pw-modal" id="pw-modal" aria-hidden="true">
   <div class="pw-card" role="dialog" aria-modal="true" aria-labelledby="pw-title">

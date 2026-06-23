@@ -12,7 +12,7 @@ let EMP = [];
 const charts = {};
 const TODAY = new Date();
 const EMP_PASSWORD_RULE = /^.{4,}$/; // 내부망용: 4자 이상이면 어떤 문자든 허용
-const PROTECTED_SCREENS = new Set(['dashboard', 'emplist', 'stats', 'detail']);
+const PROTECTED_SCREENS = new Set(['dashboard', 'emplist', 'stats', 'detail', 'evaluate']);
 
 // ═══════════════════════════════════════
 //  HELPERS
@@ -80,6 +80,23 @@ const DASH_GRADE_COLORS = {
 };
 function dashGradeColor(g) { return DASH_GRADE_COLORS[g] || DASH_GRADE_COLORS['L1']; }
 
+// ── 인사평가(평가하기) ── (라이트모드 대비 가독성 좋은 색)
+const EVAL_GRADES = [
+  { key: 'S', label: '탁월',     color: '#B38600' },
+  { key: 'A', label: '우수',     color: '#2E8B57' },
+  { key: 'G', label: '양호',     color: '#3B7DD8' },
+  { key: 'C', label: '노력필요', color: '#C77A2E' },
+  { key: 'D', label: '부진',     color: '#C0282F' },
+];
+const EVAL_PERIODS = [
+  { key: '2025-H1', label: '2025 상반기' }, { key: '2025-H2', label: '2025 하반기' },
+  { key: '2026-H1', label: '2026 상반기' }, { key: '2026-H2', label: '2026 하반기' },
+  { key: '2027-H1', label: '2027 상반기' }, { key: '2027-H2', label: '2027 하반기' },
+];
+// ratios: 등급별 목표 비율(%), data: { 직원번호: { 평가기간: 등급 } }, mult: { 직원번호: 배수횟수 }
+// confirmed: { 평가기간: true } — 최종 확정되어 수정 잠긴 기간
+const EVAL = { ratios: { S: 0, A: 0, G: 0, C: 0, D: 0 }, data: {}, mult: {}, awards: {}, confirmed: {}, loaded: false, periodInit: false };
+
 function av(name, sz = 27) {
   const safe = String(name || '?');
   const [g1, g2] = grad(safe);
@@ -113,6 +130,11 @@ function navigate(screen) {
     openPasswordGate();
     return;
   }
+  // 평가하기 메뉴는 진입 시마다 접속 비밀번호를 한 번 더 확인한다
+  if (screen === 'evaluate' && S.authenticated) {
+    openEvalAuth();
+    return;
+  }
   activateScreen(screen);
 }
 
@@ -124,13 +146,14 @@ function activateScreen(screen) {
   if (sc) sc.classList.add('active');
   const nb = document.querySelector(`[data-screen="${screen}"]`);
   if (nb) nb.classList.add('active');
-  const titles = { dashboard: '대시보드', emplist: '직원 목록', stats: '통계 분석', detail: '직원 상세' };
+  const titles = { dashboard: '대시보드', emplist: '직원 목록', stats: '통계 분석', detail: '직원 상세', evaluate: '평가하기' };
   const pt = document.getElementById('page-title');
   if (pt) pt.textContent = titles[screen] || screen;
   if (screen === 'dashboard') { renderHeader(); renderDept(); }
   if (screen === 'emplist') { sortState = []; renderEmpList(); }
   if (screen === 'detail') renderDetail();
   if (screen === 'stats')  { renderHeader(); renderStatLists(); ['age','tenure','level','dd'].forEach(k => { charts[k]?.destroy?.(); delete charts[k]; }); }
+  if (screen === 'evaluate') renderEvaluate();
   initCharts();
 }
 
@@ -567,12 +590,6 @@ function renderEmpList() {
       <td class="edu-col" style="color:#3A3A3C">${esc(e.postSchool) || '-'}</td>
       <td class="edu-col" style="color:#3A3A3C">${esc(e.postMajor) || '-'}</td>
       <td class="edu-col" style="color:#3A3A3C">${esc(e.etc) || '-'}</td>
-      <td class="row-actions">
-        <div class="row-actions-inner">
-          <button class="row-act edit" data-click="openEditFromList" data-empno="${esc(e.empNo)}" title="직원정보 수정">수정</button>
-          <button class="row-act del" data-click="deleteEmployee" data-empno="${esc(e.empNo)}" title="직원 삭제">삭제</button>
-        </div>
-      </td>
     </tr>`;
   }).join('');
   updateSortIndicators();
@@ -654,9 +671,10 @@ function renderDetail() {
     </div>
     <div class="det-card">
       <div class="det-sec" style="color:#9090BC">기타 정보</div>
-      <div class="det-row"><span class="det-lbl">특이사항</span><span class="det-val">${esc(emp.etc) || '-'}</span></div>
+      <div class="det-row"><span class="det-val">${esc(emp.etc) || '-'}</span></div>
       <div class="det-acts">
         <button class="act-btn p" data-click="openEdit">정보 수정</button>
+        <button class="act-btn d" data-click="deleteEmployee" data-empno="${esc(emp.empNo)}">직원 삭제</button>
       </div>
     </div>`;
 }
@@ -914,7 +932,6 @@ function renderDept() {
         <div class="dept-hd">
           <div>
             <div style="font-size:12px;font-weight:700;color:#1C1C1E">${esc(t)}</div>
-            <div style="font-size:10px;color:#636366;margin-top:2px">${esc(dept)}</div>
           </div>
           <div style="width:28px;height:28px;background:linear-gradient(135deg,${g1},${g2});border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">${esc(t[0])}</div>
         </div>
@@ -932,6 +949,636 @@ function renderDept() {
         </div>
       </div>`;
   }).join('');
+}
+
+// ═══════════════════════════════════════
+//  평가하기 (EVALUATION)
+// ═══════════════════════════════════════
+function evalGrade(key) { return EVAL_GRADES.find(g => g.key === key); }
+
+// 평가 대상(부장 제외) 직원
+function evalEligible() { return EMP.filter(e => e.pos !== '부장'); }
+
+// 서버에서 평가 데이터를 1회 불러온다 (이후 메모리에 유지)
+async function ensureEvaluations() {
+  if (EVAL.loaded) return;
+  try {
+    const res = await apiRequest('/api/evaluations');
+    const ev = res.evaluations || {};
+    EVAL.ratios = { S: 0, A: 0, G: 0, C: 0, D: 0, ...(ev.ratios || {}) };
+    EVAL.data = ev.evals || {};
+    EVAL.mult = ev.mult || {};
+    EVAL.awards = ev.awards || {};
+    EVAL.confirmed = ev.confirmed || {};
+    EVAL.loaded = true;
+  } catch (_) {}
+}
+
+// 평가하기 진입 비밀번호 재확인 ───────────────
+function openEvalAuth() {
+  const modal = document.getElementById('eval-auth-modal');
+  const input = document.getElementById('eval-auth-input');
+  const err = document.getElementById('eval-auth-error');
+  if (!modal || !input) { activateScreen('evaluate'); return; }
+  if (err) err.textContent = '';
+  input.value = '';
+  modal.classList.add('show');
+  setTimeout(() => input.focus(), 50);
+}
+
+function closeEvalAuth() {
+  document.getElementById('eval-auth-modal')?.classList.remove('show');
+}
+
+// 입력한 비밀번호를 /api/login으로 재검증 → 통과 시에만 평가하기 화면 표시
+async function submitEvalAuth() {
+  const input = document.getElementById('eval-auth-input');
+  const err = document.getElementById('eval-auth-error');
+  const val = input?.value || '';
+  if (!EMP_PASSWORD_RULE.test(val)) {
+    if (err) err.textContent = '비밀번호는 4자 이상 입력해 주세요.';
+    return;
+  }
+  try {
+    await apiRequest('/api/login', { method: 'POST', body: JSON.stringify({ password: val }) });
+  } catch (e) {
+    if (err) err.textContent = e.message;
+    input?.focus();
+    return;
+  }
+  closeEvalAuth();
+  activateScreen('evaluate');
+}
+
+function handleEvalAuthKey(el, ev) {
+  if (ev.key === 'Enter') submitEvalAuth();
+  if (ev.key === 'Escape') closeEvalAuth();
+}
+
+function renderEvaluate() {
+  ensureEvaluations().then(() => {
+    if (!EVAL.periodInit) { setDefaultEvalPeriod(); EVAL.periodInit = true; }
+    renderEvalRatioGrid();
+    renderEvalTeamFilter();
+    renderEvalTable();
+    updateEvalConfirmBar();
+    markTodayPeriodHeader();
+  });
+}
+
+// 오늘 날짜에 해당하는 연도/반기 헤더를 강조 (1~6월=상반기, 7~12월=하반기)
+function markTodayPeriodHeader() {
+  const y = String(TODAY.getFullYear());
+  const key = `${y}-H${TODAY.getMonth() < 6 ? 1 : 2}`;
+  document.querySelectorAll('#eval-table th[data-yr]').forEach(th =>
+    th.classList.toggle('cur-period-hd', th.dataset.yr === y));
+  document.querySelectorAll('#eval-table th[data-period]').forEach(th =>
+    th.classList.toggle('cur-period-hd', th.dataset.period === key));
+}
+
+// 평가대상 연도/반기 기본값을 오늘 날짜에 맞춤 (1~6월=상반기, 7~12월=하반기)
+function setDefaultEvalPeriod() {
+  const yearSel = document.getElementById('eval-year');
+  const halfSel = document.getElementById('eval-half');
+  if (!yearSel || !halfSel) return;
+  const y = String(TODAY.getFullYear());
+  if ([...yearSel.options].some(o => o.value === y)) yearSel.value = y;
+  halfSel.value = TODAY.getMonth() < 6 ? '1' : '2';
+}
+
+// 현재 헤더에서 선택된 평가대상 기간 (예: '2025-H1')
+function activePeriodKey() {
+  const y = document.getElementById('eval-year')?.value || '2025';
+  const h = document.getElementById('eval-half')?.value || '1';
+  return `${y}-H${h}`;
+}
+function activePeriodLabel() {
+  const k = activePeriodKey();
+  return EVAL_PERIODS.find(p => p.key === k)?.label || k;
+}
+
+// 등급별 목표 비율 입력 카드
+function renderEvalRatioGrid() {
+  const grid = document.getElementById('eval-ratio-grid');
+  if (!grid) return;
+  grid.innerHTML = EVAL_GRADES.map(g => `
+    <div class="erg-item" style="border-color:${g.color}44">
+      <span class="erg-badge" style="color:${g.color};background:${g.color}1f">${g.key}</span>
+      <span class="erg-label">${g.label}</span>
+      <input id="erg-${g.key}" class="erg-input" type="number" min="0" max="100" step="0.1"
+        value="${EVAL.ratios[g.key] ?? 0}" data-input="evalRatioInput" data-grade="${g.key}">
+      <span class="erg-pct">%</span>
+      <span class="erg-alloc"><b id="erg-alloc-${g.key}">0</b>명 <span class="erg-calc" id="erg-calc-${g.key}">(0.0%)</span></span>
+    </div>`).join('');
+  const total = document.getElementById('eval-total');
+  if (total) total.textContent = evalEligible().length;
+  updateEvalRatioUI();
+}
+
+// 입력 비율로 등급별 정수 인원을 자동 배분 + 배분 결과의 실제(계산) 비율 표시
+function updateEvalRatioUI() {
+  const eligible = evalEligible().length;
+  const ratios = {};
+  let sum = 0;
+  EVAL_GRADES.forEach(g => {
+    const inp = document.getElementById('erg-' + g.key);
+    let v = inp ? parseFloat(inp.value) : 0;
+    if (!Number.isFinite(v) || v < 0) v = 0;
+    ratios[g.key] = v;
+    sum += v;
+  });
+  sum = Math.round(sum * 10) / 10;
+
+  const alloc = evalAllocate(eligible, ratios);
+  let allocTotal = 0;
+  EVAL_GRADES.forEach(g => {
+    const n = alloc[g.key] || 0;
+    allocTotal += n;
+    const aEl = document.getElementById('erg-alloc-' + g.key);
+    if (aEl) aEl.textContent = n;
+    const cEl = document.getElementById('erg-calc-' + g.key);
+    if (cEl) cEl.textContent = `(${eligible ? (n / eligible * 100).toFixed(1) : '0.0'}%)`;
+  });
+  const atEl = document.getElementById('eval-alloc-total');
+  if (atEl) atEl.textContent = allocTotal;
+
+  const sumEl = document.getElementById('eval-ratio-sum');
+  if (sumEl) {
+    sumEl.textContent = sum.toFixed(1);
+    const ok = Math.abs(sum - 100) < 0.05;
+    sumEl.parentElement.classList.toggle('sum-ok', ok);
+    sumEl.parentElement.classList.toggle('sum-bad', !ok);
+  }
+}
+
+// 입력 중에는 합계만 갱신, 소수 2자리 이상은 한 자리로 보정
+function onEvalRatioInput(el) {
+  if (/\.\d{2,}/.test(el.value)) el.value = (Math.round(parseFloat(el.value) * 10) / 10).toString();
+  updateEvalRatioUI();
+}
+
+// 입력 비율로 등급별 정수 인원수를 자동 배분
+//  - 합계 100% → 최대잔여법으로 정확히 인원수에 맞춤(합 = 전체)
+//  - 합계 ≠ 100% → 등급별 단순 반올림(참고용)
+function evalAllocate(total, ratios) {
+  const sum = Math.round(EVAL_GRADES.reduce((s, g) => s + (Number(ratios[g.key]) || 0), 0) * 10) / 10;
+  if (Math.abs(sum - 100) < 0.05) return evalQuota(total, ratios);
+  const a = {};
+  EVAL_GRADES.forEach(g => { a[g.key] = Math.round(total * (Number(ratios[g.key]) || 0) / 100); });
+  return a;
+}
+
+async function saveEvalRatios() {
+  let sum = 0;
+  const next = {};
+  for (const g of EVAL_GRADES) {
+    const inp = document.getElementById('erg-' + g.key);
+    let v = inp ? parseFloat(inp.value) : 0;
+    if (!Number.isFinite(v) || v < 0) v = 0;
+    v = Math.round(v * 10) / 10;
+    next[g.key] = v;
+    sum += v;
+  }
+  sum = Math.round(sum * 10) / 10;
+  if (Math.abs(sum - 100) >= 0.05) {
+    alert(`등급별 비율의 합계가 100%가 되어야 합니다. (현재 ${sum.toFixed(1)}%)`);
+    return;
+  }
+  EVAL.ratios = next;
+  try {
+    await persistEvaluations();
+    updateEvalConfirmBar();
+    flashEvalSaved('목표 비율이 저장되었습니다.');
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+// 평가 테이블 ─────────────────────────
+function renderEvalTeamFilter() {
+  const sel = document.getElementById('eval-flt-team');
+  if (!sel) return;
+  const cur = sel.value || 'all';
+  const teams = sortedTeams(EMP);
+  sel.innerHTML = '<option value="all">전체 팀</option>' +
+    teams.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+  sel.value = teams.includes(cur) || cur === 'all' ? cur : 'all';
+}
+
+function evalFiltered() {
+  const s = document.getElementById('eval-srch')?.value || '';
+  const t = document.getElementById('eval-flt-team')?.value || 'all';
+  return EMP.filter(e => {
+    if (e.pos === '부장') return false; // 부장은 평가 대상에서 제외
+    if (s && !e.name.includes(s) && !e.empNo.includes(s) && !e.team.includes(s)) return false;
+    if (t !== 'all' && e.team !== t) return false;
+    return true;
+  });
+}
+
+// 평가기간 비교: 기준(오늘) 반기 이하만 입력 허용, 이후(미래) 반기는 잠금
+function periodValue(key) { const [y, h] = key.split('-H'); return Number(y) * 2 + Number(h); }
+function todayPeriodValue() { return TODAY.getFullYear() * 2 + (TODAY.getMonth() < 6 ? 1 : 2); }
+function isLockedFuture(period) { return periodValue(period) > todayPeriodValue(); }
+function periodLabel(period) { return EVAL_PERIODS.find(p => p.key === period)?.label || period; }
+
+function evalSelClass(val, period) {
+  return 'eval-sel' + (val ? ' g-' + val : '')
+    + (period === activePeriodKey() ? ' active-period' : '')
+    + (isLockedFuture(period) ? ' locked-future' : '');
+}
+
+function evalCell(empNo, period) {
+  const cur = EVAL.data[empNo]?.[period] || '';
+  const locked = !!EVAL.confirmed[period];
+  const opts = ['<option value="">-</option>']
+    .concat(EVAL_GRADES.map(g => `<option value="${g.key}"${g.key === cur ? ' selected' : ''}>${g.key} ${g.label}</option>`))
+    .join('');
+  return `<td class="c"><select class="${evalSelClass(cur, period)}"${locked ? ' disabled' : ''} data-change="setEvalGrade" data-keydown="evalCellKey" data-empno="${esc(empNo)}" data-period="${period}">${opts}</select></td>`;
+}
+
+// 배수횟수: 한 자리 숫자(0~9) 입력, 초기값 0
+function evalMultCell(empNo) {
+  const cur = EVAL.mult[empNo];
+  const val = cur === undefined || cur === null ? 0 : cur;
+  return `<input class="eval-mult" type="number" min="0" max="9" step="1" inputmode="numeric"
+    value="${esc(val)}" data-input="setEvalMult" data-focusin="selectAll" data-empno="${esc(empNo)}">`;
+}
+
+function setEvalMult(el) {
+  const empNo = el.dataset.empno;
+  const digits = el.value.replace(/[^\d]/g, '');
+  // 마지막에 입력한 한 자리 숫자를 사용 (기본값 0 뒤에 입력해 '03'이 되어도 '3'으로 처리)
+  const v = digits ? digits.slice(-1) : '0';
+  if (el.value !== v) el.value = v;
+  EVAL.mult[empNo] = Number(v);
+  scheduleEvalSave();
+}
+
+// (현직급)표창갯수: 0~99 정수, 초기값 0
+function evalAwardCell(empNo) {
+  const cur = EVAL.awards[empNo];
+  const val = cur === undefined || cur === null ? 0 : cur;
+  return `<input class="eval-mult eval-award" type="number" min="0" max="99" step="1" inputmode="numeric"
+    value="${esc(val)}" data-input="setEvalAward" data-focusin="selectAll" data-empno="${esc(empNo)}">`;
+}
+
+function setEvalAward(el) {
+  const empNo = el.dataset.empno;
+  const digits = el.value.replace(/[^\d]/g, '').slice(0, 2); // 0~99
+  const v = digits === '' ? '0' : String(Math.min(99, Number(digits)));
+  if (el.value !== v) el.value = v;
+  EVAL.awards[empNo] = Number(v);
+  scheduleEvalSave();
+}
+
+function renderEvalTable() {
+  const list = sortEmpList(evalFiltered());
+  const cnt = document.getElementById('eval-count');
+  if (cnt) cnt.textContent = list.length;
+  const tbody = document.getElementById('eval-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = list.map((e, i) => `
+    <tr>
+      <td class="c" style="color:#48484A">${i + 1}</td>
+      <td style="color:#1C1C1E">${esc(e.team)}</td>
+      <td><div style="display:flex;align-items:center;gap:7px">${av(e.name, 22)}<span style="color:#1C1C1E;font-weight:500">${esc(e.name)}</span></div></td>
+      <td style="color:#48484A;font-size:11px">${esc(e.empNo)}</td>
+      <td class="eval-pos" style="color:#1C1C1E" title="${esc(e.pos)}">${esc(e.pos)}</td>
+      <td class="c">${gtag(e.grade)}</td>
+      <td class="c">${evalAwardCell(e.empNo)}</td>
+      <td class="c">${evalMultCell(e.empNo)}</td>
+      ${EVAL_PERIODS.map(p => evalCell(e.empNo, p.key)).join('')}
+    </tr>`).join('');
+}
+
+function doEvalFilter() { renderEvalTable(); }
+
+// 같은 기간(열)에서 현재 칸 기준 dir(+1 아래 / -1 위) 방향의 다음 입력 칸으로 포커스 이동
+function moveEvalFocus(el, dir) {
+  const sels = [...document.querySelectorAll(`#eval-tbody select[data-period="${el.dataset.period}"]`)];
+  const i = sels.indexOf(el);
+  for (let j = i + dir; j >= 0 && j < sels.length; j += dir) {
+    if (!sels[j].disabled) { sels[j].focus(); break; }
+  }
+}
+
+// 평가등급 칸 키보드 조작:
+//  - S/A/G/C/D 영문자 → 해당 등급으로 직접 입력 (검증/저장)
+//  - Enter → 같은 기간(열)의 다음(아래) 행으로 이동
+//  - Shift+Tab → 같은 기간(열)의 이전(위) 행으로 이동
+//  - 일반 Tab → 이동 차단 (확정/잠금된 칸은 건너뜀)
+function evalCellKey(el, ev) {
+  if (el.disabled) return;
+  const up = ev.key.length === 1 ? ev.key.toUpperCase() : '';
+  if (EVAL_GRADES.some(g => g.key === up)) {
+    ev.preventDefault();              // 네이티브 타이프어헤드 억제 후 직접 반영
+    if (el.value !== up) {
+      el.value = up;
+      setEvalGrade(el);               // 정원 검증 + 저장 (초과 시 자동 되돌림)
+    }
+    return;
+  }
+  if (ev.key === 'Tab') {
+    ev.preventDefault();
+    moveEvalFocus(el, ev.shiftKey ? -1 : +1); // Tab=아래, Shift+Tab=위
+    return;
+  }
+  if (ev.key !== 'Enter') return;
+  ev.preventDefault();
+  moveEvalFocus(el, +1);
+}
+
+function setEvalGrade(el) {
+  const empNo = el.dataset.empno;
+  const period = el.dataset.period;
+  const val = el.value;
+  const prev = EVAL.data[empNo]?.[period] || '';
+
+  // 확정된 기간은 수정 불가 (안전장치 — 평소엔 select가 disabled)
+  if (EVAL.confirmed[period]) { el.value = prev; el.className = evalSelClass(prev, period); return; }
+
+  // 기준(오늘) 반기 이후의 미래 기간은 등급 입력 불가 → 되돌리고 토스트 안내
+  if (isLockedFuture(period)) {
+    el.value = prev;
+    el.className = evalSelClass(prev, period);
+    showEvalToast(`${periodLabel(period)}은(는) 아직 평가 입력 기간이 아닙니다.`);
+    return;
+  }
+
+  // 활성 평가대상 기간이면 등급별 목표 정원(quota) 초과 입력을 차단
+  if (val && period === activePeriodKey()) {
+    const v = evalValidate(period);
+    if (v.quotaOk) {
+      const after = v.counts[val] + (prev === val ? 0 : 1); // 이번 선택 반영 후 해당 등급 인원
+      if (after > v.quota[val]) {
+        el.value = prev;                       // 마지막 입력 되돌림(선택 해제/이전값)
+        el.className = evalSelClass(prev, period);
+        const g = evalGrade(val);
+        showEvalModal('등급 인원 초과',
+          `${val}(${g.label}) 등급의 목표 인원 ${v.quota[val]}명을 모두 채웠습니다.\n목표 비율을 초과하여 선택할 수 없습니다.`);
+        return;
+      }
+    }
+  }
+
+  if (!EVAL.data[empNo]) EVAL.data[empNo] = {};
+  if (val) EVAL.data[empNo][period] = val;
+  else delete EVAL.data[empNo][period];
+  if (!Object.keys(EVAL.data[empNo]).length) delete EVAL.data[empNo];
+  el.className = evalSelClass(val, period);
+  scheduleEvalSave();
+  updateEvalConfirmBar();
+}
+
+// ── 비율 대비 등급 입력 검증 ──
+// 목표 비율을 평가대상 인원에 최대잔여법으로 정수 배분 → 등급별 정원(quota)
+function evalQuota(total, ratios = EVAL.ratios) {
+  const parts = EVAL_GRADES.map(g => {
+    const exact = total * (Number(ratios[g.key]) || 0) / 100;
+    return { key: g.key, floor: Math.floor(exact), rem: exact - Math.floor(exact) };
+  });
+  let left = total - parts.reduce((s, p) => s + p.floor, 0);
+  // 잔여 인원은 소수부가 큰 등급부터 1명씩 배정
+  parts.slice().sort((a, b) => b.rem - a.rem).forEach(p => { if (left > 0) { p.floor++; left--; } });
+  const q = {};
+  parts.forEach(p => { q[p.key] = p.floor; });
+  return q;
+}
+
+function evalValidate(period) {
+  const eligible = evalEligible();
+  const counts = { S: 0, A: 0, G: 0, C: 0, D: 0 };
+  eligible.forEach(e => { const g = EVAL.data[e.empNo]?.[period]; if (g && counts[g] !== undefined) counts[g]++; });
+  const sum = Math.round(EVAL_GRADES.reduce((s, g) => s + (EVAL.ratios[g.key] || 0), 0) * 10) / 10;
+  const quotaOk = Math.abs(sum - 100) < 0.05;
+  const quota = evalQuota(eligible.length);
+  const assigned = EVAL_GRADES.reduce((s, g) => s + counts[g.key], 0);
+  let over = null, exact = true;
+  EVAL_GRADES.forEach(g => {
+    if (counts[g.key] > quota[g.key]) over = g.key;
+    if (counts[g.key] !== quota[g.key]) exact = false;
+  });
+  const match = quotaOk && assigned === eligible.length && exact && !over;
+  return { eligible: eligible.length, counts, quota, quotaOk, assigned, over, match };
+}
+
+function updateEvalConfirmBar() {
+  const period = activePeriodKey();
+  const confirmed = !!EVAL.confirmed[period];
+  const v = evalValidate(period);
+  const statusEl = document.getElementById('eval-confirm-status');
+  const btn = document.getElementById('eval-confirm-btn');
+  if (statusEl) {
+    if (confirmed) {
+      statusEl.innerHTML = `<span class="ecf-ok">✓ ${esc(activePeriodLabel())} 확정 완료</span>`;
+    } else if (!v.quotaOk) {
+      statusEl.innerHTML = `<span class="ecf-warn">목표 비율 합계를 100%로 저장하세요</span>`;
+    } else if (v.match) {
+      statusEl.innerHTML = `<span class="ecf-ok">목표 비율과 일치 — 확정 가능</span>`;
+    } else {
+      const remain = v.eligible - v.assigned;
+      const detail = EVAL_GRADES.map(g => {
+        const c = v.counts[g.key], q = v.quota[g.key];
+        return `<span class="${c === q ? 'ecf-g-ok' : 'ecf-g-no'}">${g.key} ${c}/${q}</span>`;
+      }).join('');
+      statusEl.innerHTML = `<span class="ecf-warn">${remain > 0 ? `미입력 ${remain}명` : '비율 불일치'}</span><span class="ecf-detail">${detail}</span>`;
+    }
+  }
+  if (btn) {
+    btn.textContent = confirmed ? '확정 취소' : '확정하기';
+    btn.classList.toggle('confirmed', confirmed);
+    btn.classList.toggle('ready', !confirmed && v.match);
+    btn.disabled = false; // 항상 클릭 가능 — 불일치 시 클릭하면 오류 모달로 안내
+  }
+}
+
+function onEvalPeriodChange() {
+  renderEvalTable();        // 활성 기간 강조 / 잠금 상태 갱신
+  updateEvalConfirmBar();
+}
+
+function confirmEvalPeriod() {
+  const period = activePeriodKey();
+  const label = activePeriodLabel();
+  const wasConfirmed = !!EVAL.confirmed[period];
+  if (wasConfirmed) {
+    if (!confirm(`${label} 확정을 취소하시겠습니까?\n취소하면 해당 기간을 다시 수정할 수 있습니다.`)) return;
+    delete EVAL.confirmed[period];
+  } else {
+    const v = evalValidate(period);
+    if (!v.match) {
+      showEvalModal('확정할 수 없습니다',
+        `${label} 평가를 확정하려면 아래 항목을 먼저 해결해 주세요.`, evalConfirmErrors(v));
+      return;
+    }
+    if (!confirm(`${label} 평가를 최종 확정하시겠습니까?\n확정 후에는 해당 기간 등급이 잠깁니다.`)) return;
+    EVAL.confirmed[period] = true;
+  }
+  persistEvaluations()
+    .then(() => { renderEvalTable(); updateEvalConfirmBar(); flashEvalSaved(wasConfirmed ? '확정 취소됨' : '확정 완료'); })
+    .catch(e => {
+      if (wasConfirmed) EVAL.confirmed[period] = true; else delete EVAL.confirmed[period]; // 저장 실패 시 원복
+      alert(e.message);
+    });
+}
+
+// 확정 불가 사유 목록 생성 (목표 비율 미설정 / 미입력 / 등급별 인원 초과·부족)
+function evalConfirmErrors(v) {
+  if (!v.quotaOk) return ['목표 비율 합계가 100%가 아닙니다. 먼저 목표 비율을 100%로 설정·저장해 주세요.'];
+  const errs = [];
+  const remain = v.eligible - v.assigned;
+  if (remain > 0) errs.push(`미입력 인원이 ${remain}명 있습니다. (입력 ${v.assigned}명 / 전체 ${v.eligible}명)`);
+  EVAL_GRADES.forEach(g => {
+    const c = v.counts[g.key], q = v.quota[g.key];
+    if (c !== q) errs.push(`${g.key}(${g.label}) 등급: 입력 ${c}명 · 목표 ${q}명 — ${c > q ? `${c - q}명 초과` : `${q - c}명 부족`}`);
+  });
+  return errs;
+}
+
+// items가 있으면 목록(ul)으로, 없으면 단순 메시지로 표시
+function showEvalModal(title, msg, items) {
+  const t = document.getElementById('eval-modal-title');
+  const m = document.getElementById('eval-modal-msg');
+  if (t) t.textContent = title;
+  if (m) {
+    if (Array.isArray(items) && items.length) {
+      m.innerHTML = `${msg ? `<div style="margin-bottom:9px">${esc(msg)}</div>` : ''}` +
+        `<ul class="eval-err-list">${items.map(s => `<li>${esc(s)}</li>`).join('')}</ul>`;
+    } else {
+      m.textContent = msg;
+    }
+  }
+  document.getElementById('eval-modal')?.classList.add('show');
+}
+function closeEvalModal() { document.getElementById('eval-modal')?.classList.remove('show'); }
+
+// 평가 등급 입력은 빠르게 연속될 수 있어 디바운스 저장
+let evalSaveTimer = null;
+function scheduleEvalSave() {
+  clearTimeout(evalSaveTimer);
+  evalSaveTimer = setTimeout(() => {
+    persistEvaluations().then(() => flashEvalSaved('저장됨')).catch(e => alert(e.message));
+  }, 450);
+}
+
+async function persistEvaluations() {
+  await apiRequest('/api/evaluations', {
+    method: 'PUT',
+    body: JSON.stringify({ ratios: EVAL.ratios, evals: EVAL.data, mult: EVAL.mult, awards: EVAL.awards, confirmed: EVAL.confirmed }),
+  });
+}
+
+let evalFlashTimer = null;
+function flashEvalSaved(msg) {
+  const el = document.getElementById('eval-save-state');
+  if (!el) return;
+  el.textContent = '✓ ' + msg;
+  el.classList.add('show');
+  clearTimeout(evalFlashTimer);
+  evalFlashTimer = setTimeout(() => el.classList.remove('show'), 1800);
+}
+
+// 화면 하단 토스트 메시지 (입력 불가 등 일시 안내)
+let evalToastTimer = null;
+function showEvalToast(msg) {
+  let el = document.getElementById('eval-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'eval-toast';
+    el.className = 'eval-toast';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(evalToastTimer);
+  evalToastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ── 평가 CSV 내보내기 / 가져오기 / 템플릿 ──
+// 헤더명 → 평가기간 키 매핑 (csvRow/parseCSV/triggerDownload는 직원목록 함수 재사용)
+const EVAL_CSV_PERIOD = {
+  '2025상반기': '2025-H1', '2025하반기': '2025-H2',
+  '2026상반기': '2026-H1', '2026하반기': '2026-H2',
+  '2027상반기': '2027-H1', '2027하반기': '2027-H2',
+};
+const EVAL_CSV_HEADERS = ['팀', '성명', '직원번호', '직위', '직급', '(현직급)표창갯수', '배수횟수', ...Object.keys(EVAL_CSV_PERIOD)];
+
+function exportEvalCSV() {
+  const list = sortEmpList(evalFiltered());
+  const rows = list.map(e => csvRow([
+    e.team, e.name, e.empNo, e.pos, e.grade, EVAL.awards[e.empNo] ?? 0, EVAL.mult[e.empNo] ?? 0,
+    ...EVAL_PERIODS.map(p => EVAL.data[e.empNo]?.[p.key] || ''),
+  ]));
+  triggerDownload([csvRow(EVAL_CSV_HEADERS), ...rows].join('\n'), 'EIMS_평가.csv');
+}
+
+function downloadEvalTemplate() {
+  const ex = ['여신심사팀', '홍길동', '1234567', '팀원', 'L2', 2, 3, 'S', 'A', '', '', '', ''];
+  triggerDownload([csvRow(EVAL_CSV_HEADERS), csvRow(ex)].join('\n'), 'EIMS_평가_템플릿.csv');
+}
+
+// 직원번호로 매칭하여 등급/배수횟수를 반영. 확정(잠금)된 기간은 보호하고 건너뛴다.
+function importEvalCSV(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async ev => {
+    let text = ev.target.result;
+    if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+    const rows = parseCSV(text).filter(r => r.some(c => c.trim() !== ''));
+    input.value = '';
+    if (rows.length < 2) { alert('데이터가 없습니다.'); return; }
+    const hdr = rows[0].map(h => h.trim());
+    const empNoIdx = hdr.indexOf('직원번호');
+    const multIdx = hdr.indexOf('배수횟수');
+    const awardIdx = hdr.indexOf('(현직급)표창갯수');
+    if (empNoIdx < 0) { alert('CSV에 "직원번호" 열이 필요합니다.'); return; }
+    const periodIdx = {};
+    hdr.forEach((h, i) => { if (EVAL_CSV_PERIOD[h]) periodIdx[EVAL_CSV_PERIOD[h]] = i; });
+
+    const known = new Set(EMP.map(e => e.empNo));
+    let applied = 0, unknown = 0, lockedHit = false, badGrade = 0;
+    rows.slice(1).forEach(vals => {
+      const empNo = (vals[empNoIdx] || '').trim();
+      if (!empNo) return;
+      if (!known.has(empNo)) { unknown++; return; }
+      if (multIdx >= 0) {
+        const m = (vals[multIdx] || '').replace(/[^\d]/g, '').slice(-1);
+        EVAL.mult[empNo] = m === '' ? 0 : Number(m);
+      }
+      if (awardIdx >= 0) {
+        const a = (vals[awardIdx] || '').replace(/[^\d]/g, '').slice(0, 2);
+        EVAL.awards[empNo] = a === '' ? 0 : Math.min(99, Number(a));
+      }
+      Object.entries(periodIdx).forEach(([pk, ci]) => {
+        if (EVAL.confirmed[pk]) { lockedHit = true; return; } // 확정 기간 보호
+        const g = (vals[ci] || '').trim().toUpperCase();
+        if (g === '') { if (EVAL.data[empNo]) delete EVAL.data[empNo][pk]; return; }
+        if (!EVAL_GRADES.some(x => x.key === g)) { badGrade++; return; }
+        if (!EVAL.data[empNo]) EVAL.data[empNo] = {};
+        EVAL.data[empNo][pk] = g;
+      });
+      if (EVAL.data[empNo] && !Object.keys(EVAL.data[empNo]).length) delete EVAL.data[empNo];
+      applied++;
+    });
+
+    try {
+      await persistEvaluations();
+      EVAL.loaded = true;
+      renderEvalRatioGrid();
+      renderEvalTable();
+      updateEvalConfirmBar();
+      let msg = `${applied}명의 평가 데이터를 반영했습니다.`;
+      if (unknown) msg += `\n· 매칭되지 않은 직원번호 ${unknown}건은 건너뜀`;
+      if (badGrade) msg += `\n· 허용되지 않은 등급값 ${badGrade}건은 건너뜀 (S/A/G/C/D만 가능)`;
+      if (lockedHit) msg += `\n· 확정된 기간은 보호되어 일부 값이 적용되지 않았습니다`;
+      alert(msg);
+    } catch (e) {
+      alert(e.message);
+    }
+  };
+  reader.readAsText(file, 'utf-8');
 }
 
 // ═══════════════════════════════════════
@@ -1285,6 +1932,23 @@ const ACTIONS = {
   handleChangePwKey: (el, ev) => handleChangePwKey(el, ev),
   logout: () => doLogout(),
   sortBy: el => toggleSort(el.dataset.sort),
+  evalFilter: () => doEvalFilter(),
+  evalRatioInput: el => onEvalRatioInput(el),
+  saveEvalRatios: () => saveEvalRatios(),
+  setEvalGrade: el => setEvalGrade(el),
+  setEvalMult: el => setEvalMult(el),
+  setEvalAward: el => setEvalAward(el),
+  selectAll: el => el.select?.(),
+  evalCellKey: (el, ev) => evalCellKey(el, ev),
+  evalPeriodChange: () => onEvalPeriodChange(),
+  confirmEvalPeriod: () => confirmEvalPeriod(),
+  closeEvalModal: () => closeEvalModal(),
+  submitEvalAuth: () => submitEvalAuth(),
+  closeEvalAuth: () => closeEvalAuth(),
+  handleEvalAuthKey: (el, ev) => handleEvalAuthKey(el, ev),
+  exportEvalCSV: () => exportEvalCSV(),
+  downloadEvalTemplate: () => downloadEvalTemplate(),
+  importEvalCSV: el => importEvalCSV(el),
 };
 
 function delegate(type) {
@@ -1296,7 +1960,7 @@ function delegate(type) {
   };
 }
 
-['click', 'dblclick', 'change', 'input', 'keydown'].forEach(type => {
+['click', 'dblclick', 'change', 'input', 'keydown', 'focusin'].forEach(type => {
   document.addEventListener(type, delegate(type));
 });
 

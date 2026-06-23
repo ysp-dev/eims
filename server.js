@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const ROOT = __dirname;
 const DATA_FILE = path.join(ROOT, 'data', 'employees.json');
 const AUTH_FILE = path.join(ROOT, 'data', 'auth.json');
+const EVAL_FILE = path.join(ROOT, 'data', 'evaluations.json');
 const PORT = Number(process.env.PORT || 7000);
 const SESSION_TTL_MS = 30 * 60 * 1000;
 const MAX_AUTH_FAILS = 5;
@@ -209,6 +210,69 @@ function saveEmployees(employees) {
   fs.renameSync(tmp, DATA_FILE);
 }
 
+// ── 인사평가(평가하기) 저장소 ──
+// { ratios: {S,A,G,C,D}, evals: { [직원번호]: { [평가기간]: 등급 } }, mult: { [직원번호]: 배수횟수 }, confirmed: { [평가기간]: true } }
+const EVAL_GRADE_KEYS = ['S', 'A', 'G', 'C', 'D'];
+const EVAL_PERIOD_KEYS = new Set(['2025-H1', '2025-H2', '2026-H1', '2026-H2', '2027-H1', '2027-H2']);
+
+function emptyEvaluations() {
+  return { ratios: { S: 0, A: 0, G: 0, C: 0, D: 0 }, evals: {}, mult: {}, awards: {}, confirmed: {} };
+}
+
+// 외부 입력(파일/요청)을 신뢰 가능한 형태로 정규화: 허용된 등급/기간만, 비율은 0 이상 소수 1자리
+function normalizeEvaluations(input) {
+  const ratios = {};
+  for (const g of EVAL_GRADE_KEYS) {
+    const n = Number(input?.ratios?.[g]);
+    ratios[g] = Number.isFinite(n) && n >= 0 ? Math.round(n * 10) / 10 : 0;
+  }
+  const evals = {};
+  const src = input?.evals && typeof input.evals === 'object' ? input.evals : {};
+  for (const [empNo, periods] of Object.entries(src)) {
+    if (!periods || typeof periods !== 'object') continue;
+    const rec = {};
+    for (const [p, g] of Object.entries(periods)) {
+      if (EVAL_PERIOD_KEYS.has(p) && EVAL_GRADE_KEYS.includes(g)) rec[p] = g;
+    }
+    if (Object.keys(rec).length) evals[String(empNo)] = rec;
+  }
+  // 배수횟수: 직원별 한 자리 숫자(0~9)만 허용
+  const mult = {};
+  const mSrc = input?.mult && typeof input.mult === 'object' ? input.mult : {};
+  for (const [empNo, v] of Object.entries(mSrc)) {
+    const n = Math.trunc(Number(v));
+    if (Number.isFinite(n) && n >= 0 && n <= 9) mult[String(empNo)] = n;
+  }
+  // (현직급)표창갯수: 직원별 정수 0~99
+  const awards = {};
+  const aSrc = input?.awards && typeof input.awards === 'object' ? input.awards : {};
+  for (const [empNo, v] of Object.entries(aSrc)) {
+    const n = Math.trunc(Number(v));
+    if (Number.isFinite(n) && n >= 0 && n <= 99) awards[String(empNo)] = n;
+  }
+  // 최종 확정된 평가기간 (해당 기간은 수정 잠금)
+  const confirmed = {};
+  const cSrc = input?.confirmed && typeof input.confirmed === 'object' ? input.confirmed : {};
+  for (const [p, v] of Object.entries(cSrc)) {
+    if (EVAL_PERIOD_KEYS.has(p) && v) confirmed[p] = true;
+  }
+  return { ratios, evals, mult, awards, confirmed };
+}
+
+function loadEvaluations() {
+  try {
+    return normalizeEvaluations(JSON.parse(fs.readFileSync(EVAL_FILE, 'utf8')));
+  } catch (_) {
+    return emptyEvaluations();
+  }
+}
+
+function saveEvaluations(data) {
+  const tmp = `${EVAL_FILE}.${process.pid}.tmp`;
+  fs.writeFileSync(tmp, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
+  fs.renameSync(tmp, EVAL_FILE);
+}
+
 function normalizeEmployee(input, fallback = {}) {
   return {
     ...fallback,
@@ -358,6 +422,17 @@ async function handleApi(req, res, pathname) {
       if (token !== myToken) sessions.delete(token);
     }
     return send(res, 200, { ok: true });
+  }
+
+  if (pathname === '/api/evaluations' && req.method === 'GET') {
+    return send(res, 200, { evaluations: loadEvaluations() });
+  }
+
+  if (pathname === '/api/evaluations' && req.method === 'PUT') {
+    const body = await readJson(req);
+    const data = normalizeEvaluations(body);
+    saveEvaluations(data);
+    return send(res, 200, { evaluations: data });
   }
 
   if (pathname === '/api/employees' && req.method === 'GET') {
