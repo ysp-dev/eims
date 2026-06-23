@@ -453,8 +453,6 @@ function sortEmpList(list) {
   return [...bujangs, ...normals, ...specials];
 }
 
-function doFilter() { renderEmpList(); }
-
 // ═══════════════════════════════════════
 //  STATS LISTS
 // ═══════════════════════════════════════
@@ -1252,8 +1250,6 @@ function renderEvalTable() {
     </tr>`).join('');
 }
 
-function doEvalFilter() { renderEvalTable(); }
-
 // 같은 기간(열)에서 현재 칸 기준 dir(+1 아래 / -1 위) 방향의 다음 입력 칸으로 포커스 이동
 function moveEvalFocus(el, dir) {
   const sels = [...document.querySelectorAll(`#eval-tbody select[data-period="${el.dataset.period}"]`)];
@@ -1911,7 +1907,7 @@ function importCSV(input) {
 // ═══════════════════════════════════════
 const ACTIONS = {
   navigate: el => navigate(el.dataset.screen || el.dataset.arg),
-  filter: () => doFilter(),
+  filter: () => renderEmpList(),
   openAdd: () => openAdd(),
   toggleEduCols: () => toggleEduCols(),
   downloadTemplate: () => downloadTemplate(),
@@ -1932,7 +1928,7 @@ const ACTIONS = {
   handleChangePwKey: (el, ev) => handleChangePwKey(el, ev),
   logout: () => doLogout(),
   sortBy: el => toggleSort(el.dataset.sort),
-  evalFilter: () => doEvalFilter(),
+  evalFilter: () => renderEvalTable(),
   evalRatioInput: el => onEvalRatioInput(el),
   saveEvalRatios: () => saveEvalRatios(),
   setEvalGrade: el => setEvalGrade(el),

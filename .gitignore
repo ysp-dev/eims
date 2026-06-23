@@ -7,8 +7,9 @@ employees.json
 .DS_Store
 **/.DS_Store
 
-# 의존성 / 로그 / 환경
+# 의존성 / 로그 / 환경 / 아카이브
 node_modules/
 *.log
+*.zip
 .env
 .env.*
