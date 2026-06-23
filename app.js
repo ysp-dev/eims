@@ -442,7 +442,7 @@ function renderStatLists() {
   const threeYearsAgo = new Date(TODAY.getFullYear() - 3, TODAY.getMonth(), TODAY.getDate());
 
   const retireList = EMP
-    .filter(e => calcAge(e.birthYear, e.birth) >= RETIRE_AGE - RETIRE_NEAR)
+    .filter(e => TODAY.getFullYear() - Number(e.birthYear) >= RETIRE_AGE - RETIRE_NEAR)
     .sort((a, b) => (a.birth || '').localeCompare(b.birth || ''));
 
   const newList = EMP
@@ -516,7 +516,7 @@ function renderHeader() {
   const femalePct = document.getElementById('kpi-female-pct');
   if (femalePct) femalePct.textContent = pct(n - male) + '%';
   const retire = document.getElementById('kpi-retire');
-  if (retire) retire.textContent = EMP.filter(e => calcAge(e.birthYear, e.birth) >= 53).length + '명';
+  if (retire) retire.textContent = EMP.filter(e => TODAY.getFullYear() - Number(e.birthYear) >= 53).length + '명';
 
   const stTotal = document.getElementById('st-total');
   if (stTotal) stTotal.textContent = n;
