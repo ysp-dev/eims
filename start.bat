@@ -71,7 +71,7 @@ echo Starting eims server...
 echo URL: http://localhost:%PORT%
 echo.
 
-start "eims Server" /b "%NODE_EXE%" "%CD%\server.js"
+powershell -NoProfile -Command "Start-Process -FilePath '%NODE_EXE%' -ArgumentList '%CD%\server.js' -WorkingDirectory '%CD%' -WindowStyle Hidden"
 
 timeout /t 3 /nobreak >nul
 

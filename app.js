@@ -442,16 +442,16 @@ function renderStatLists() {
   const threeYearsAgo = new Date(TODAY.getFullYear() - 3, TODAY.getMonth(), TODAY.getDate());
 
   const retireList = EMP
-    .filter(e => TODAY.getFullYear() - Number(e.birthYear) >= RETIRE_AGE - RETIRE_NEAR)
-    .sort((a, b) => Number(a.birthYear) - Number(b.birthYear));
+    .filter(e => calcAge(e.birthYear, e.birth) >= RETIRE_AGE - RETIRE_NEAR)
+    .sort((a, b) => (a.birth || '').localeCompare(b.birth || ''));
 
   const newList = EMP
     .filter(e => e.joinDate && new Date(e.joinDate) >= threeYearsAgo)
     .sort((a, b) => (b.joinDate || '').localeCompare(a.joinDate || ''));
 
-  const ROW_STYLE = 'border-bottom:1px solid rgba(255,255,255,.05)';
-  const TD = (txt, style = '') => `<td style="padding:7px 10px;font-size:11px;color:#B8B8D4;${style}">${esc(String(txt ?? '-'))}</td>`;
-  const TH = (txt) => `<th style="padding:6px 10px;font-size:10px;color:#6C6C90;font-weight:500;text-align:left;border-bottom:1px solid #1E1E2E">${txt}</th>`;
+  const ROW_STYLE = 'border-bottom:1px solid #F2F2F7';
+  const TD = (txt, style = '') => `<td style="padding:7px 10px;font-size:11px;color:#2C2C2E;${style}">${esc(String(txt ?? '-'))}</td>`;
+  const TH = (txt) => `<th style="padding:6px 10px;font-size:10px;color:#636366;font-weight:500;text-align:left;border-bottom:1px solid #E5E5EA">${txt}</th>`;
 
   const retireSub = document.getElementById('st-retire-sub');
   const newSub    = document.getElementById('st-new-sub');
@@ -461,15 +461,15 @@ function renderStatLists() {
   const retireEl = document.getElementById('st-retire-list');
   if (retireEl) {
     if (!retireList.length) {
-      retireEl.innerHTML = '<div style="text-align:center;color:#5C5C88;font-size:12px;padding:20px 0">해당 직원 없음</div>';
+      retireEl.innerHTML = '<div style="text-align:center;color:#8E8E93;font-size:12px;padding:20px 0">해당 직원 없음</div>';
     } else {
       retireEl.innerHTML = `<table style="width:100%;border-collapse:collapse">
         <thead><tr>${TH('성명')}${TH('팀')}${TH('직위')}${TH('호칭')}${TH('생년월일')}${TH('만나이')}</tr></thead>
         <tbody>${retireList.map(e => `<tr style="${ROW_STYLE}">
-          ${TD(e.name, 'color:#E0E0F0;font-weight:500')}
+          ${TD(e.name, 'color:#1C1C1E;font-weight:500')}
           ${TD(e.team)}${TD(e.pos)}${TD(e.title)}
           ${TD(e.birth || '-')}
-          ${TD(calcAge(e.birthYear, e.birth) + '세', 'color:#FFBC00;font-weight:600')}
+          ${TD(calcAge(e.birthYear, e.birth) + '세', 'color:#B38600;font-weight:600')}
         </tr>`).join('')}</tbody>
       </table>`;
     }
@@ -478,14 +478,14 @@ function renderStatLists() {
   const newEl = document.getElementById('st-new-list');
   if (newEl) {
     if (!newList.length) {
-      newEl.innerHTML = '<div style="text-align:center;color:#5C5C88;font-size:12px;padding:20px 0">해당 직원 없음</div>';
+      newEl.innerHTML = '<div style="text-align:center;color:#8E8E93;font-size:12px;padding:20px 0">해당 직원 없음</div>';
     } else {
       newEl.innerHTML = `<table style="width:100%;border-collapse:collapse">
         <thead><tr>${TH('성명')}${TH('팀')}${TH('직위')}${TH('호칭')}${TH('입행일')}</tr></thead>
         <tbody>${newList.map(e => `<tr style="${ROW_STYLE}">
-          ${TD(e.name, 'color:#E0E0F0;font-weight:500')}
+          ${TD(e.name, 'color:#1C1C1E;font-weight:500')}
           ${TD(e.team)}${TD(e.pos)}${TD(e.title)}
-          ${TD(e.joinDate, 'color:#4EAF72;font-weight:500')}
+          ${TD(e.joinDate, 'color:#2E8B57;font-weight:500')}
         </tr>`).join('')}</tbody>
       </table>`;
     }
@@ -544,29 +544,29 @@ function renderEmpList() {
     const isSpec = e.pos === '전문직무직원';
     const db = isSpec ? `<span class="db s">${esc(e.pos)}</span>` : '';
     return `<tr data-dblclick="openDetail" data-empno="${esc(e.empNo)}">
-      <td class="c" style="color:#9090B4">${i + 1}</td>
-      <td style="color:#B8B8D4">${esc(e.dept)}</td>
-      <td style="color:#B8B8D4">${esc(e.team)}</td>
-      <td><div style="display:flex;align-items:center;gap:7px">${av(e.name, 22)}<span style="color:#E0E0F0;font-weight:500">${esc(e.name)}</span>${db}</div></td>
-      <td style="color:#9090B4;font-size:11px">${esc(e.empNo)}</td>
-      <td style="color:#B8B8D4">${esc(e.pos)}</td>
+      <td class="c" style="color:#8E8E93">${i + 1}</td>
+      <td style="color:#2C2C2E">${esc(e.dept)}</td>
+      <td style="color:#2C2C2E">${esc(e.team)}</td>
+      <td><div style="display:flex;align-items:center;gap:7px">${av(e.name, 22)}<span style="color:#1C1C1E;font-weight:500">${esc(e.name)}</span>${db}</div></td>
+      <td style="color:#8E8E93;font-size:11px">${esc(e.empNo)}</td>
+      <td style="color:#2C2C2E">${esc(e.pos)}</td>
       <td class="c">${gtag(e.grade)}</td>
-      <td style="color:#B8B8D4">${esc(e.title)}</td>
-      <td style="color:#A8A8C4">${esc(e.joinDate)}</td>
-      <td style="color:#A8A8C4;font-size:11px">${calcYears(e.joinDate)}</td>
-      <td class="c" style="color:#A8A8C4">${esc(e.birthYear)}</td>
-      <td class="c" style="color:#A8A8C4">${calcAge(e.birthYear, e.birth)}세</td>
-      <td style="color:#A8A8C4">${esc(e.birth)}</td>
+      <td style="color:#2C2C2E">${esc(e.title)}</td>
+      <td style="color:#3A3A3C">${esc(e.joinDate)}</td>
+      <td style="color:#3A3A3C;font-size:11px">${calcYears(e.joinDate)}</td>
+      <td class="c" style="color:#3A3A3C">${esc(e.birthYear)}</td>
+      <td class="c" style="color:#3A3A3C">${calcAge(e.birthYear, e.birth)}세</td>
+      <td style="color:#3A3A3C">${esc(e.birth)}</td>
       <td class="c" style="color:${gc}">${esc(e.gender)}</td>
-      <td style="color:#A8A8C4">${esc(e.gradeUpDate) || '-'}</td>
-      <td class="c" style="color:#C0C0D8">${esc(e.gradeLevel)}</td>
-      <td style="color:#A8A8C4">${esc(e.gradeSetDate) || '-'}</td>
-      <td style="color:#A8A8C4">${esc(e.gradeNextDate) || '-'}</td>
-      <td class="edu-col" style="color:#A8A8C4">${esc(e.preSchool) || '-'}</td>
-      <td class="edu-col" style="color:#A8A8C4">${esc(e.preMajor) || '-'}</td>
-      <td class="edu-col" style="color:#A8A8C4">${esc(e.postSchool) || '-'}</td>
-      <td class="edu-col" style="color:#A8A8C4">${esc(e.postMajor) || '-'}</td>
-      <td class="edu-col" style="color:#A8A8C4">${esc(e.etc) || '-'}</td>
+      <td style="color:#3A3A3C">${esc(e.gradeUpDate) || '-'}</td>
+      <td class="c" style="color:#1C1C1E">${esc(e.gradeLevel)}</td>
+      <td style="color:#3A3A3C">${esc(e.gradeSetDate) || '-'}</td>
+      <td style="color:#3A3A3C">${esc(e.gradeNextDate) || '-'}</td>
+      <td class="edu-col" style="color:#3A3A3C">${esc(e.preSchool) || '-'}</td>
+      <td class="edu-col" style="color:#3A3A3C">${esc(e.preMajor) || '-'}</td>
+      <td class="edu-col" style="color:#3A3A3C">${esc(e.postSchool) || '-'}</td>
+      <td class="edu-col" style="color:#3A3A3C">${esc(e.postMajor) || '-'}</td>
+      <td class="edu-col" style="color:#3A3A3C">${esc(e.etc) || '-'}</td>
       <td class="row-actions">
         <div class="row-actions-inner">
           <button class="row-act edit" data-click="openEditFromList" data-empno="${esc(e.empNo)}" title="직원정보 수정">수정</button>
@@ -913,16 +913,16 @@ function renderDept() {
       <div class="dept-card">
         <div class="dept-hd">
           <div>
-            <div style="font-size:12px;font-weight:700;color:#D0D0E8">${esc(t)}</div>
-            <div style="font-size:10px;color:#6C6C90;margin-top:2px">${esc(dept)}</div>
+            <div style="font-size:12px;font-weight:700;color:#1C1C1E">${esc(t)}</div>
+            <div style="font-size:10px;color:#636366;margin-top:2px">${esc(dept)}</div>
           </div>
-          <div style="width:28px;height:28px;background:linear-gradient(135deg,${g1},${g2});border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#0F0F14;flex-shrink:0">${esc(t[0])}</div>
+          <div style="width:28px;height:28px;background:linear-gradient(135deg,${g1},${g2});border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">${esc(t[0])}</div>
         </div>
         <div style="display:flex;gap:6px;margin-bottom:10px">
-          <div><div style="font-size:16px;font-weight:700;color:#E8E8F0">${te.length}</div><div style="font-size:10px;color:#6C6C90">총원</div></div>
-          <div><div style="font-size:16px;font-weight:700;color:#5B9BD5">${male}</div><div style="font-size:10px;color:#6C6C90">남</div></div>
-          <div><div style="font-size:16px;font-weight:700;color:#E84D8A">${te.length - male}</div><div style="font-size:10px;color:#6C6C90">여</div></div>
-          <div><div style="font-size:16px;font-weight:700;color:#FFBC00">${avgAge}</div><div style="font-size:10px;color:#6C6C90">평균</div></div>
+          <div><div style="font-size:16px;font-weight:700;color:#1C1C1E">${te.length}</div><div style="font-size:10px;color:#636366">총원</div></div>
+          <div><div style="font-size:16px;font-weight:700;color:#3B7DD8">${male}</div><div style="font-size:10px;color:#636366">남</div></div>
+          <div><div style="font-size:16px;font-weight:700;color:#C93B7A">${te.length - male}</div><div style="font-size:10px;color:#636366">여</div></div>
+          <div><div style="font-size:16px;font-weight:700;color:#B38600">${avgAge}</div><div style="font-size:10px;color:#636366">평균</div></div>
         </div>
         <div class="grade-grid">
           <div class="gc l1"><div class="gn">${l1}</div><div class="gl">L1</div></div>
@@ -937,10 +937,10 @@ function renderDept() {
 // ═══════════════════════════════════════
 //  CHARTS
 // ═══════════════════════════════════════
-const TK = { color: '#8080A0', font: { family: "'Noto Sans KR',sans-serif", size: 10 } };
+const TK = { color: '#48484A', font: { family: "'Noto Sans KR',sans-serif", size: 10 } };
 const BS = {
-  x: { grid: { color: 'rgba(255,255,255,.04)' }, ticks: TK, border: { color: 'transparent' } },
-  y: { grid: { color: 'rgba(255,255,255,.04)' }, ticks: TK, border: { color: 'transparent' } },
+  x: { grid: { color: 'rgba(0,0,0,.06)' }, ticks: TK, border: { color: 'transparent' } },
+  y: { grid: { color: 'rgba(0,0,0,.06)' }, ticks: TK, border: { color: 'transparent' } },
 };
 
 // 인라인 데이터 레이블 플러그인 (외부 라이브러리 불필요)
@@ -993,7 +993,7 @@ const DL = {
           : Math.abs(props.y - props.base);
         ctx.save();
         ctx.font = 'bold 10px "Noto Sans KR",sans-serif';
-        ctx.fillStyle = 'rgba(255,255,255,.9)';
+        ctx.fillStyle = '#1C1C1E';
         ctx.textAlign = 'center';
         if (isStacked) {
           if (barLen < 14) { ctx.restore(); return; }
@@ -1041,9 +1041,9 @@ function initCharts() {
     if (e2 && !charts.grade) {
       charts.grade = new C(e2, {
         type: 'doughnut',
-        data: { labels: Object.keys(gC), datasets: [{ data: Object.values(gC), backgroundColor: Object.keys(gC).map(dashGradeColor), borderWidth: 2, borderColor: '#1A1A24' }] },
+        data: { labels: Object.keys(gC), datasets: [{ data: Object.values(gC), backgroundColor: Object.keys(gC).map(dashGradeColor), borderWidth: 0 }] },
         plugins: [DL],
-        options: { responsive: true, maintainAspectRatio: false, cutout: '66%', plugins: { legend: { position: 'right', labels: { generateLabels(chart) { const d = chart.data; return d.labels.map((lbl, i) => ({ text: `${lbl}  ${d.datasets[0].data[i]}명`, fillStyle: d.datasets[0].backgroundColor[i], strokeStyle: '#1A1A24', lineWidth: 2, hidden: false, index: i, fontColor: '#C0C0D8' })); }, color: '#C0C0D8', font: { family: "'Noto Sans KR',sans-serif", size: 10 }, padding: 10, boxWidth: 10 } } } },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '66%', plugins: { legend: { position: 'right', labels: { generateLabels(chart) { const d = chart.data; return d.labels.map((lbl, i) => ({ text: `${lbl}  ${d.datasets[0].data[i]}명`, fillStyle: d.datasets[0].backgroundColor[i], strokeStyle: 'transparent', lineWidth: 0, hidden: false, index: i, fontColor: '#3A3A3C' })); }, color: '#3A3A3C', font: { family: "'Noto Sans KR',sans-serif", size: 10 }, padding: 10, boxWidth: 10 } } } },
       });
     }
 
@@ -1052,9 +1052,9 @@ function initCharts() {
     if (e3 && !charts.gender) {
       charts.gender = new C(e3, {
         type: 'doughnut',
-        data: { labels: ['남성', '여성'], datasets: [{ data: [mc, EMP.length - mc], backgroundColor: ['#5B9BD5', '#E84D8A'], borderWidth: 2, borderColor: '#1A1A24' }] },
+        data: { labels: ['남성', '여성'], datasets: [{ data: [mc, EMP.length - mc], backgroundColor: ['#5B9BD5', '#E84D8A'], borderWidth: 0 }] },
         plugins: [DL],
-        options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'bottom', labels: { generateLabels(chart) { const d = chart.data; return d.labels.map((lbl, i) => ({ text: `${lbl}  ${d.datasets[0].data[i]}명 (${EMP.length ? Math.round(d.datasets[0].data[i]/EMP.length*100) : 0}%)`, fillStyle: d.datasets[0].backgroundColor[i], strokeStyle: '#1A1A24', lineWidth: 2, hidden: false, index: i, fontColor: '#C0C0D8' })); }, color: '#C0C0D8', font: { family: "'Noto Sans KR',sans-serif", size: 10 }, padding: 14, boxWidth: 10 } } } },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'bottom', labels: { generateLabels(chart) { const d = chart.data; return d.labels.map((lbl, i) => ({ text: `${lbl}  ${d.datasets[0].data[i]}명 (${EMP.length ? Math.round(d.datasets[0].data[i]/EMP.length*100) : 0}%)`, fillStyle: d.datasets[0].backgroundColor[i], strokeStyle: 'transparent', lineWidth: 0, hidden: false, index: i, fontColor: '#3A3A3C' })); }, color: '#3A3A3C', font: { family: "'Noto Sans KR',sans-serif", size: 10 }, padding: 14, boxWidth: 10 } } } },
       });
     }
 
@@ -1090,7 +1090,7 @@ function initCharts() {
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: {
-            legend: { labels: { color: '#8080A0', font: { family: "'Noto Sans KR',sans-serif", size: 10 }, padding: 14, boxWidth: 12 } },
+            legend: { labels: { color: '#48484A', font: { family: "'Noto Sans KR',sans-serif", size: 10 }, padding: 14, boxWidth: 12 } },
             dl: { formatter: (v, chart, di, ji) => {
               const total = chart.data.datasets.reduce((s, d) => s + (d.data[ji] || 0), 0);
               return total ? `${v} (${Math.round(v/total*100)}%)` : `${v}`;
