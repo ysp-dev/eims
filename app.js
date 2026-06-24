@@ -211,6 +211,7 @@ async function apiRequest(url, options = {}) {
     S.authenticated = false;
     sessionStorage.removeItem('eims_auth');
     stopIdleTimer();
+    S.pendingScreen = S.screen; // 재로그인 후 보던 화면으로 복귀
     openPasswordGate();
   }
   if (!res.ok) throw new Error(data.error || '요청 처리 중 오류가 발생했습니다.');
@@ -547,7 +548,7 @@ function renderHeader() {
   const femalePct = document.getElementById('kpi-female-pct');
   if (femalePct) femalePct.textContent = pct(n - male) + '%';
   const retire = document.getElementById('kpi-retire');
-  if (retire) retire.textContent = EMP.filter(e => TODAY.getFullYear() - Number(e.birthYear) >= 53).length + '명';
+  if (retire) retire.textContent = EMP.filter(e => TODAY.getFullYear() - Number(e.birthYear) >= RETIRE_AGE - RETIRE_NEAR).length + '명';
 
   const stTotal = document.getElementById('st-total');
   if (stTotal) stTotal.textContent = n;
@@ -927,7 +928,6 @@ function renderDept() {
   const teams = sortedTeams(EMP);
   document.getElementById('dept-cards').innerHTML = teams.map(t => {
     const te     = EMP.filter(e => e.team === t);
-    const dept   = te[0].dept;
     const male   = te.filter(e => e.gender === '남').length;
     const avgAge = Math.round(te.reduce((s, e) => s + calcAge(e.birthYear), 0) / te.length);
     const l4 = te.filter(e => e.grade === 'L4').length;
@@ -1617,7 +1617,7 @@ const EVAL_CSV_COMMENT = Object.fromEntries(Object.entries(EVAL_CSV_PERIOD).map(
 const EVAL_CSV_HEADERS = ['팀', '성명', '직원번호', '직위', '직급', '(현직급)표창갯수', '배수횟수', ...Object.keys(EVAL_CSV_PERIOD), ...Object.keys(EVAL_CSV_COMMENT)];
 
 function exportEvalCSV() {
-  const list = sortEmpList(evalFiltered());
+  const list = sortEmpList(evalEligible()); // 화면 필터와 무관하게 평가대상(부장 제외) 전원 내보내기
   const rows = list.map(e => csvRow([
     e.team, e.name, e.empNo, e.pos, e.grade, EVAL.awards[e.empNo] ?? 0, EVAL.mult[e.empNo] ?? 0,
     ...EVAL_PERIODS.map(p => EVAL.data[e.empNo]?.[p.key] || ''),
@@ -1662,11 +1662,11 @@ function importEvalCSV(input) {
       if (!known.has(empNo)) { unknown++; return; }
       if (multIdx >= 0) {
         const m = (vals[multIdx] || '').replace(/[^\d]/g, '').slice(-1);
-        EVAL.mult[empNo] = m === '' ? 0 : Number(m);
+        if (m !== '') EVAL.mult[empNo] = Number(m); // 빈칸은 기존값 보존 ('0' 입력 시에만 0)
       }
       if (awardIdx >= 0) {
         const a = (vals[awardIdx] || '').replace(/[^\d]/g, '').slice(0, 2);
-        EVAL.awards[empNo] = a === '' ? 0 : Math.min(99, Number(a));
+        if (a !== '') EVAL.awards[empNo] = Math.min(99, Number(a)); // 빈칸은 기존값 보존
       }
       Object.entries(periodIdx).forEach(([pk, ci]) => {
         if (EVAL.confirmed[pk]) { lockedHit = true; return; } // 확정 기간 보호
@@ -1679,7 +1679,7 @@ function importEvalCSV(input) {
       if (EVAL.data[empNo] && !Object.keys(EVAL.data[empNo]).length) delete EVAL.data[empNo];
       Object.entries(commentIdx).forEach(([pk, ci]) => {
         if (EVAL.confirmed[pk]) { lockedHit = true; return; } // 확정 기간 보호
-        const txt = (vals[ci] || '').trim().slice(0, 4000);
+        const txt = unguardCSV((vals[ci] || '').trim()).slice(0, 4000);
         if (txt === '') { if (EVAL.comments[empNo]) delete EVAL.comments[empNo][pk]; return; }
         if (!EVAL.comments[empNo]) EVAL.comments[empNo] = {};
         EVAL.comments[empNo][pk] = txt;
@@ -1950,6 +1950,11 @@ function csvRow(vals) {
   }).join(',');
 }
 
+// csvRow의 수식방어(선행 ') 되돌리기 — 내보낸 파일을 다시 가져올 때 텍스트 변형 방지
+function unguardCSV(s) {
+  return /^'[=+\-@\t\r]/.test(s) ? s.slice(1) : s;
+}
+
 function triggerDownload(content, filename) {
   const blob = new Blob(['﻿' + content], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -2007,7 +2012,7 @@ function importCSV(input) {
     CSV_HEADERS.forEach((h, i) => { colMap[h] = CSV_FIELDS[i]; });
     const imported = rows.slice(1).map((vals, i) => {
       const obj = {};
-      hdrs.forEach((h, j) => { const key = colMap[h]; if (key) obj[key] = vals[j] !== undefined ? vals[j].trim() : ''; });
+      hdrs.forEach((h, j) => { const key = colMap[h]; if (key) obj[key] = vals[j] !== undefined ? unguardCSV(vals[j].trim()) : ''; });
       obj.no = parseInt(obj.no) || (i + 1);
       obj.birthYear = parseInt(obj.birthYear) || 0;
       obj.gradeLevel = parseInt(obj.gradeLevel) || 1;

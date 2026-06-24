@@ -460,6 +460,10 @@ async function handleApi(req, res, pathname) {
     const prev = loadEvaluations();
     for (const p of Object.keys(prev.confirmed)) {
       if (!data.confirmed[p]) continue; // 확정 해제 → 수정 가능
+      // 확정 기간은 저장본과 '정확히' 동일하게 강제: 들어온 값에서 해당 기간을 모두 제거 후 저장본 값으로 복원
+      // (기존 값 보존 + 없던 직원에 대한 신규 추가/변조까지 차단)
+      for (const rec of Object.values(data.evals)) delete rec[p];
+      for (const rec of Object.values(data.comments)) delete rec[p];
       for (const [empNo, rec] of Object.entries(prev.evals)) {
         if (rec[p] !== undefined) (data.evals[empNo] ||= {})[p] = rec[p];
       }
@@ -467,6 +471,9 @@ async function handleApi(req, res, pathname) {
         if (rec[p] !== undefined) (data.comments[empNo] ||= {})[p] = rec[p];
       }
     }
+    // 위 delete로 비워진 레코드 정리
+    for (const [empNo, rec] of Object.entries(data.evals)) if (!Object.keys(rec).length) delete data.evals[empNo];
+    for (const [empNo, rec] of Object.entries(data.comments)) if (!Object.keys(rec).length) delete data.comments[empNo];
     saveEvaluations(data);
     return send(res, 200, { evaluations: data });
   }
@@ -567,6 +574,14 @@ setInterval(() => {
     if (st.lockUntil <= now && st.count === 0) authFailures.delete(key);
   }
 }, 5 * 60 * 1000).unref();
+
+server.on('error', err => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`포트 ${PORT}이(가) 이미 사용 중입니다. EIMS가 이미 실행 중인지 확인하세요. (다른 포트: PORT=xxxx)`);
+    process.exit(1); // 스택트레이스 대신 안내 메시지로 종료
+  }
+  throw err; // 그 외 예기치 못한 서버 오류는 그대로 노출
+});
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`EIMS server running at http://0.0.0.0:${PORT}`);
