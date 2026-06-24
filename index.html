@@ -254,15 +254,7 @@
         <!-- 평가대상 기간 선택 -->
         <div class="eval-period-row">
           <span class="eval-period-lbl">평가대상</span>
-          <select class="flt-sel" id="eval-year" data-change="evalPeriodChange">
-            <option value="2025">2025년</option>
-            <option value="2026">2026년</option>
-            <option value="2027">2027년</option>
-          </select>
-          <select class="flt-sel" id="eval-half" data-change="evalPeriodChange">
-            <option value="1">상반기</option>
-            <option value="2">하반기</option>
-          </select>
+          <select class="flt-sel" id="eval-period" data-change="evalPeriodChange"></select>
         </div>
         <div class="eval-ratio-head">
           <div>
@@ -306,29 +298,25 @@
       <div class="tbl-wrap full-tbl">
         <div class="tbl-scroll">
           <table id="eval-table">
-            <thead>
-              <tr>
-                <th class="c" rowspan="2">No</th>
-                <th rowspan="2">팀</th>
-                <th rowspan="2">성명</th>
-                <th rowspan="2">직원번호</th>
-                <th class="eval-pos" rowspan="2">직위</th>
-                <th class="c" rowspan="2">직급</th>
-                <th class="c" rowspan="2">(현직급)<br>표창갯수</th>
-                <th class="c" rowspan="2">배수횟수</th>
-                <th class="c eval-yr" colspan="2" data-yr="2025">2025년</th>
-                <th class="c eval-yr" colspan="2" data-yr="2026">2026년</th>
-                <th class="c eval-yr" colspan="2" data-yr="2027">2027년</th>
-              </tr>
-              <tr>
-                <th class="c eval-sub" data-period="2025-H1">상반기</th><th class="c eval-sub" data-period="2025-H2">하반기</th>
-                <th class="c eval-sub" data-period="2026-H1">상반기</th><th class="c eval-sub" data-period="2026-H2">하반기</th>
-                <th class="c eval-sub" data-period="2027-H1">상반기</th><th class="c eval-sub" data-period="2027-H2">하반기</th>
-              </tr>
-            </thead>
+            <thead id="eval-thead"></thead>
             <tbody id="eval-tbody"></tbody>
           </table>
         </div>
+      </div>
+    </div>
+
+    <!-- ══ 종합평가의견 ══ -->
+    <div id="screen-evalcmt" class="screen">
+      <button class="back-btn" data-click="backToEval">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        평가 목록으로 돌아가기
+      </button>
+      <div class="eval-ratio-card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+          <div class="eval-cmt-hd" id="evalcmt-hd"></div>
+          <button class="add-emp-btn" data-click="saveEvalComment">의견 저장</button>
+        </div>
+        <div id="eval-cmt-body"></div>
       </div>
     </div>
 

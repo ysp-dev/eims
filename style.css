@@ -186,6 +186,14 @@ select.edt-inp{appearance:none;-webkit-appearance:none;background-image:url("dat
 .pw-btn.p{background:rgba(255,188,0,.12);border:1px solid rgba(255,188,0,.3);color:#B38600;font-weight:600}
 .pw-btn:hover{filter:brightness(.96)}
 
+/* 종합평가의견 화면 */
+.eval-cmt-row{margin-bottom:11px}
+.eval-cmt-head{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:#1C1C1E;margin-bottom:4px}
+.eval-cmt-lock{font-size:10px;font-weight:600;color:#8E8E93;background:#F2F2F7;padding:1px 6px;border-radius:4px}
+.eval-cmt-area{width:100%;background:#F2F2F7;border:1px solid #D1D1D6;border-radius:8px;color:#1C1C1E;font-size:12px;line-height:1.5;font-family:'Noto Sans KR',sans-serif;padding:8px 10px;outline:none;resize:vertical;box-sizing:border-box}
+.eval-cmt-area:focus{border-color:#FFBC00;background:#FFFFFF}
+.eval-cmt-area[readonly]{background:#FAFAFA;color:#636366}
+
 /* ── 상단 바 비밀번호 변경 버튼 ── */
 .tb-btn{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;background:rgba(100,100,120,.06);border:1px solid #D1D1D6;border-radius:8px;color:#636366;font-size:12px;font-family:'Noto Sans KR',sans-serif;cursor:pointer}
 .tb-btn:hover{background:rgba(255,188,0,.1);border-color:rgba(255,188,0,.3);color:#B38600}

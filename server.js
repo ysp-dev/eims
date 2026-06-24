@@ -216,7 +216,7 @@ const EVAL_GRADE_KEYS = ['S', 'A', 'G', 'C', 'D'];
 const EVAL_PERIOD_KEYS = new Set(['2025-H1', '2025-H2', '2026-H1', '2026-H2', '2027-H1', '2027-H2']);
 
 function emptyEvaluations() {
-  return { ratios: { S: 0, A: 0, G: 0, C: 0, D: 0 }, evals: {}, mult: {}, awards: {}, confirmed: {} };
+  return { ratios: { S: 0, A: 0, G: 0, C: 0, D: 0 }, evals: {}, mult: {}, awards: {}, comments: {}, confirmed: {} };
 }
 
 // 외부 입력(파일/요청)을 신뢰 가능한 형태로 정규화: 허용된 등급/기간만, 비율은 0 이상 소수 1자리
@@ -250,13 +250,26 @@ function normalizeEvaluations(input) {
     const n = Math.trunc(Number(v));
     if (Number.isFinite(n) && n >= 0 && n <= 99) awards[String(empNo)] = n;
   }
+  // 종합평가의견: 직원별/기간별 자유 텍스트 (허용 기간만, 4000자 이내, 빈 값은 버림)
+  const comments = {};
+  const cmSrc = input?.comments && typeof input.comments === 'object' ? input.comments : {};
+  for (const [empNo, periods] of Object.entries(cmSrc)) {
+    if (!periods || typeof periods !== 'object') continue;
+    const rec = {};
+    for (const [p, t] of Object.entries(periods)) {
+      if (!EVAL_PERIOD_KEYS.has(p)) continue;
+      const text = String(t ?? '').slice(0, 4000).trim();
+      if (text) rec[p] = text;
+    }
+    if (Object.keys(rec).length) comments[String(empNo)] = rec;
+  }
   // 최종 확정된 평가기간 (해당 기간은 수정 잠금)
   const confirmed = {};
   const cSrc = input?.confirmed && typeof input.confirmed === 'object' ? input.confirmed : {};
   for (const [p, v] of Object.entries(cSrc)) {
     if (EVAL_PERIOD_KEYS.has(p) && v) confirmed[p] = true;
   }
-  return { ratios, evals, mult, awards, confirmed };
+  return { ratios, evals, mult, awards, comments, confirmed };
 }
 
 function loadEvaluations() {
