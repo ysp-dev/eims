@@ -632,19 +632,19 @@ function renderDetail() {
     <div style="display:flex;align-items:center;gap:16px">
       ${av(emp.name, 52)}
       <div>
-        <div style="font-size:20px;font-weight:700;color:#E8E8F0">${esc(emp.name)}</div>
-        <div style="font-size:11px;color:#9090BC;margin-bottom:10px">${esc(emp.dept)} · ${esc(emp.team)} · ${esc(emp.title)}</div>
+        <div style="font-size:20px;font-weight:700;color:#1C1C1E">${esc(emp.name)}</div>
+        <div style="font-size:11px;color:#636366;margin-bottom:10px">${esc(emp.dept)} · ${esc(emp.team)} · ${esc(emp.title)}</div>
         <div style="display:flex;gap:7px;flex-wrap:wrap">
           ${gtag(emp.grade)}
-          <span style="font-size:11px;color:#8080AA;background:rgba(255,255,255,.05);padding:4px 12px;border-radius:20px">직원번호 ${esc(emp.empNo)}</span>
-          <span style="font-size:11px;color:#8080AA;background:rgba(255,255,255,.05);padding:4px 12px;border-radius:20px">등급 ${esc(emp.gradeLevel)}</span>
+          <span style="font-size:11px;color:#636366;background:#F2F2F7;padding:4px 12px;border-radius:20px">직원번호 ${esc(emp.empNo)}</span>
+          <span style="font-size:11px;color:#636366;background:#F2F2F7;padding:4px 12px;border-radius:20px">등급 ${esc(emp.gradeLevel)}</span>
         </div>
       </div>
     </div>
     <div style="text-align:right">
-      <div style="font-size:11px;color:#6C6C90;margin-bottom:4px">입행일</div>
-      <div style="font-size:15px;font-weight:600;color:#C8C8E0">${esc(emp.joinDate)}</div>
-      <div style="font-size:11px;color:#FFBC00;margin-top:4px;font-weight:500">${calcYears(emp.joinDate)}</div>
+      <div style="font-size:11px;color:#636366;margin-bottom:4px">입행일</div>
+      <div style="font-size:15px;font-weight:600;color:#1C1C1E">${esc(emp.joinDate)}</div>
+      <div style="font-size:11px;color:#B38600;margin-top:4px;font-weight:500">${calcYears(emp.joinDate)}</div>
     </div>`;
 
   document.getElementById('det-grid').innerHTML = `
@@ -969,7 +969,7 @@ function evalEligible() { return EMP.filter(e => e.pos !== '부장'); }
 
 // 서버에서 평가 데이터를 1회 불러온다 (이후 메모리에 유지)
 async function ensureEvaluations() {
-  if (EVAL.loaded) return;
+  if (EVAL.loaded) return true;
   try {
     const res = await apiRequest('/api/evaluations');
     const ev = res.evaluations || {};
@@ -980,7 +980,8 @@ async function ensureEvaluations() {
     EVAL.comments = ev.comments || {};
     EVAL.confirmed = ev.confirmed || {};
     EVAL.loaded = true;
-  } catch (_) {}
+    return true;
+  } catch (_) { return false; } // 로드 실패: EVAL.loaded=false 유지 → 렌더/저장 차단
 }
 
 // 평가하기 진입 비밀번호 재확인 ───────────────
@@ -1025,7 +1026,12 @@ function handleEvalAuthKey(el, ev) {
 }
 
 function renderEvaluate() {
-  ensureEvaluations().then(() => {
+  ensureEvaluations().then(ok => {
+    if (!ok) { // 로드 실패: 빈 상태로 그려서 덮어쓰지 않도록 중단하고 안내
+      const tb = document.getElementById('eval-tbody');
+      if (tb) tb.innerHTML = '<tr><td colspan="20" style="padding:24px;text-align:center;color:#C0282F">평가 데이터를 불러오지 못했습니다. 새로고침 후 다시 시도하세요.</td></tr>';
+      return;
+    }
     if (!EVAL.periodInit) {
       renderEvalHead();        // 기간 컬럼을 EVAL_PERIODS로부터 동적 생성
       renderEvalPeriodSelect();
@@ -1569,6 +1575,7 @@ function scheduleEvalSave() {
 }
 
 async function persistEvaluations() {
+  if (!EVAL.loaded) throw new Error('평가 데이터가 로드되지 않아 저장할 수 없습니다. 새로고침 후 다시 시도하세요.'); // 빈 상태 덮어쓰기 방지
   await apiRequest('/api/evaluations', {
     method: 'PUT',
     body: JSON.stringify({ ratios: EVAL.ratios, evals: EVAL.data, mult: EVAL.mult, awards: EVAL.awards, comments: EVAL.comments, confirmed: EVAL.confirmed }),

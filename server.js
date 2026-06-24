@@ -14,6 +14,7 @@ const AUTH_LOCK_MS = 30 * 1000;
 const PASSWORD_RULE = /^.{4,}$/; // 내부망용: 4자 이상이면 어떤 문자든 허용
 const SECURE_COOKIE = process.env.EIMS_SECURE === '1';
 const COOKIE_FLAGS = `HttpOnly; SameSite=Lax; Path=/${SECURE_COOKIE ? '; Secure' : ''}`;
+fs.mkdirSync(path.join(ROOT, 'data'), { recursive: true }); // 저장 전 data/ 보장 (새 배포/압축해제 환경)
 let PASSWORD_HASH = resolvePasswordHash();
 
 const sessions = new Map();
@@ -199,8 +200,9 @@ function requireSession(req, res) {
 function loadEmployees() {
   try {
     return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
-  } catch (_) {
-    return [];
+  } catch (e) {
+    if (e.code === 'ENOENT') return []; // 파일 없음 = 초기 상태(빈 목록 허용)
+    throw e; // 파싱/권한 오류는 빈 데이터로 덮어쓰지 않도록 전파 → 500
   }
 }
 
@@ -213,7 +215,14 @@ function saveEmployees(employees) {
 // ── 인사평가(평가하기) 저장소 ──
 // { ratios: {S,A,G,C,D}, evals: { [직원번호]: { [평가기간]: 등급 } }, mult: { [직원번호]: 배수횟수 }, confirmed: { [평가기간]: true } }
 const EVAL_GRADE_KEYS = ['S', 'A', 'G', 'C', 'D'];
-const EVAL_PERIOD_KEYS = new Set(['2025-H1', '2025-H2', '2026-H1', '2026-H2', '2027-H1', '2027-H2']);
+// 평가기간 키 검증: 클라이언트가 TODAY 기준으로 상한 없이 생성하므로(app.js EVAL_PERIODS)
+// 서버도 고정 목록 대신 형식+하한(시작연도)으로 검증한다. 미래 반기까지 무한 허용해도
+// 클라이언트가 만들지 않는 기간은 들어오지 않으므로 안전하고, 화이트리스트 누락에 의한 무성 데이터 유실이 없다.
+const EVAL_START_YEAR = 2025;
+const isEvalPeriod = p => {
+  const m = /^(\d{4})-H([12])$/.exec(p);
+  return !!m && Number(m[1]) >= EVAL_START_YEAR;
+};
 
 function emptyEvaluations() {
   return { ratios: { S: 0, A: 0, G: 0, C: 0, D: 0 }, evals: {}, mult: {}, awards: {}, comments: {}, confirmed: {} };
@@ -232,7 +241,7 @@ function normalizeEvaluations(input) {
     if (!periods || typeof periods !== 'object') continue;
     const rec = {};
     for (const [p, g] of Object.entries(periods)) {
-      if (EVAL_PERIOD_KEYS.has(p) && EVAL_GRADE_KEYS.includes(g)) rec[p] = g;
+      if (isEvalPeriod(p) && EVAL_GRADE_KEYS.includes(g)) rec[p] = g;
     }
     if (Object.keys(rec).length) evals[String(empNo)] = rec;
   }
@@ -257,7 +266,7 @@ function normalizeEvaluations(input) {
     if (!periods || typeof periods !== 'object') continue;
     const rec = {};
     for (const [p, t] of Object.entries(periods)) {
-      if (!EVAL_PERIOD_KEYS.has(p)) continue;
+      if (!isEvalPeriod(p)) continue;
       const text = String(t ?? '').slice(0, 4000).trim();
       if (text) rec[p] = text;
     }
@@ -267,7 +276,7 @@ function normalizeEvaluations(input) {
   const confirmed = {};
   const cSrc = input?.confirmed && typeof input.confirmed === 'object' ? input.confirmed : {};
   for (const [p, v] of Object.entries(cSrc)) {
-    if (EVAL_PERIOD_KEYS.has(p) && v) confirmed[p] = true;
+    if (isEvalPeriod(p) && v) confirmed[p] = true;
   }
   return { ratios, evals, mult, awards, comments, confirmed };
 }
@@ -275,8 +284,9 @@ function normalizeEvaluations(input) {
 function loadEvaluations() {
   try {
     return normalizeEvaluations(JSON.parse(fs.readFileSync(EVAL_FILE, 'utf8')));
-  } catch (_) {
-    return emptyEvaluations();
+  } catch (e) {
+    if (e.code === 'ENOENT') return emptyEvaluations(); // 파일 없음 = 초기 상태
+    throw e; // 파싱/권한 오류는 빈 데이터로 덮어쓰지 않도록 전파 → 500
   }
 }
 
@@ -444,6 +454,19 @@ async function handleApi(req, res, pathname) {
   if (pathname === '/api/evaluations' && req.method === 'PUT') {
     const body = await readJson(req);
     const data = normalizeEvaluations(body);
+    // 확정(잠금)된 기간은 서버에서도 보호: 여전히 확정 상태인 기간의 등급/의견은
+    // 저장본 값을 강제로 보존한다(클라이언트 상태 꼬임·수동 호출로 인한 변조 방지).
+    // 이번 요청에서 확정이 해제된 기간은 정상적으로 수정 허용.
+    const prev = loadEvaluations();
+    for (const p of Object.keys(prev.confirmed)) {
+      if (!data.confirmed[p]) continue; // 확정 해제 → 수정 가능
+      for (const [empNo, rec] of Object.entries(prev.evals)) {
+        if (rec[p] !== undefined) (data.evals[empNo] ||= {})[p] = rec[p];
+      }
+      for (const [empNo, rec] of Object.entries(prev.comments)) {
+        if (rec[p] !== undefined) (data.comments[empNo] ||= {})[p] = rec[p];
+      }
+    }
     saveEvaluations(data);
     return send(res, 200, { evaluations: data });
   }
