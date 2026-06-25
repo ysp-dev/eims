@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(perl -pi -e \"s/'Noto Sans KR'/'Pretendard'/g\" app.js style.css)",
+      "Bash(perl -pi -e 's/\"Noto Sans KR\"/\"Pretendard\"/g' app.js)",
+      "Bash(cd /Users/youngsoonpark/Documents/GitHub/eims *)",
+      "Bash(node -e ' *)"
+    ],
+    "additionalDirectories": [
+      "/Users/youngsoonpark/Documents/GitHub/eims/libs/fonts"
+    ]
+  }
+}

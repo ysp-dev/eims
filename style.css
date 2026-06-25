@@ -43,7 +43,7 @@
 *, *::before, *::after { box-sizing: border-box; }
 body {
   margin: 0;
-  font-family: 'Noto Sans KR', sans-serif;
+  font-family: 'Pretendard', sans-serif;
   background: var(--bg-main);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
@@ -60,7 +60,7 @@ body {
 .tbl-scroll::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.15); border-radius: 6px; }
 .tbl-scroll::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.3); }
 
-input::placeholder { color: var(--text-tertiary); font-family: 'Noto Sans KR', sans-serif; }
+input::placeholder { color: var(--text-tertiary); font-family: 'Pretendard', sans-serif; }
 select option { background: var(--bg-card); color: var(--text-primary); }
 
 @keyframes fadeIn {
@@ -142,7 +142,7 @@ select option { background: var(--bg-card); color: var(--text-primary); }
   border-left: 3px solid transparent;
   color: var(--text-secondary);
   font-size: 13px;
-  font-family: 'Noto Sans KR', sans-serif;
+  font-family: 'Pretendard', sans-serif;
   font-weight: 500;
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -466,7 +466,7 @@ tbody tr:hover td {
   border-radius: var(--radius-sm);
   color: var(--text-primary);
   font-size: 13px;
-  font-family: 'Noto Sans KR', sans-serif;
+  font-family: 'Pretendard', sans-serif;
   outline: none;
   transition: var(--transition-base);
 }
@@ -485,7 +485,7 @@ tbody tr:hover td {
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
   font-size: 12px;
-  font-family: 'Noto Sans KR', sans-serif;
+  font-family: 'Pretendard', sans-serif;
   outline: none;
   cursor: pointer;
   transition: var(--transition-base);
@@ -521,7 +521,7 @@ tbody tr:hover td {
   color: #1C1C1E;
   font-size: 12px;
   font-weight: 700;
-  font-family: 'Noto Sans KR', sans-serif;
+  font-family: 'Pretendard', sans-serif;
   border-radius: var(--radius-sm);
   cursor: pointer;
   white-space: nowrap;
@@ -655,7 +655,7 @@ tbody tr:hover td {
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
   font-size: 12px;
-  font-family: 'Noto Sans KR', sans-serif;
+  font-family: 'Pretendard', sans-serif;
   font-weight: 600;
   cursor: pointer;
   margin-bottom: 16px;
@@ -733,7 +733,7 @@ tbody tr:hover td {
   padding: 10px;
   font-size: 12px;
   font-weight: 700;
-  font-family: 'Noto Sans KR', sans-serif;
+  font-family: 'Pretendard', sans-serif;
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: var(--transition-base);
@@ -804,7 +804,7 @@ tbody tr:hover td {
   color: var(--kb-yellow-dark);
   font-size: 12px;
   font-weight: 700;
-  font-family: 'Noto Sans KR', sans-serif;
+  font-family: 'Pretendard', sans-serif;
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: var(--transition-base);
@@ -865,7 +865,7 @@ tbody tr:hover td {
   padding: 8px 12px;
   color: var(--text-primary);
   font-size: 13px;
-  font-family: 'Noto Sans KR', sans-serif;
+  font-family: 'Pretendard', sans-serif;
   width: 100%;
   box-sizing: border-box;
   transition: var(--transition-base);
@@ -897,7 +897,7 @@ select.edt-inp {
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 600;
-  font-family: 'Noto Sans KR', sans-serif;
+  font-family: 'Pretendard', sans-serif;
   border-radius: var(--radius-sm);
   cursor: pointer;
   white-space: nowrap;
@@ -935,7 +935,7 @@ select.edt-inp {
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 600;
-  font-family: 'Noto Sans KR', sans-serif;
+  font-family: 'Pretendard', sans-serif;
   border-radius: var(--radius-sm);
   cursor: pointer;
   white-space: nowrap;
@@ -1022,7 +1022,7 @@ select.edt-inp {
   border-radius: var(--radius-sm);
   color: var(--text-primary);
   font-size: 14px;
-  font-family: 'Noto Sans KR', sans-serif;
+  font-family: 'Pretendard', sans-serif;
   padding: 0 14px;
   outline: none;
   transition: var(--transition-base);
@@ -1053,7 +1053,7 @@ select.edt-inp {
   border-radius: var(--radius-sm);
   font-size: 13px;
   font-weight: 700;
-  font-family: 'Noto Sans KR', sans-serif;
+  font-family: 'Pretendard', sans-serif;
   cursor: pointer;
   transition: var(--transition-base);
   border: 1px solid transparent;
@@ -1117,7 +1117,7 @@ select.edt-inp {
   color: var(--text-primary);
   font-size: 13px;
   line-height: 1.6;
-  font-family: 'Noto Sans KR', sans-serif;
+  font-family: 'Pretendard', sans-serif;
   padding: 10px 14px;
   outline: none;
   resize: vertical;
@@ -1148,7 +1148,7 @@ select.edt-inp {
   color: var(--text-secondary);
   font-size: 13px;
   font-weight: 600;
-  font-family: 'Noto Sans KR', sans-serif;
+  font-family: 'Pretendard', sans-serif;
   cursor: pointer;
   box-shadow: var(--shadow-sm);
   transition: var(--transition-base);
@@ -1262,7 +1262,7 @@ select.edt-inp {
   color: var(--text-primary);
   font-size: 14px;
   font-weight: 700;
-  font-family: 'Noto Sans KR', sans-serif;
+  font-family: 'Pretendard', sans-serif;
   text-align: right;
   outline: none;
   transition: var(--transition-base);
@@ -1350,7 +1350,7 @@ select.edt-inp {
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 700;
-  font-family: 'Noto Sans KR', sans-serif;
+  font-family: 'Pretendard', sans-serif;
   outline: none;
   cursor: pointer;
   text-align: center;
@@ -1425,7 +1425,7 @@ select.edt-inp {
   background: #1D1D21;
   color: #FFFFFF;
   font-size: 13px;
-  font-family: 'Noto Sans KR', sans-serif;
+  font-family: 'Pretendard', sans-serif;
   padding: 12px 22px;
   border-radius: var(--radius-md);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
@@ -1466,7 +1466,7 @@ select.edt-inp {
   color: var(--text-primary);
   font-size: 12px;
   font-weight: 700;
-  font-family: 'Noto Sans KR', sans-serif;
+  font-family: 'Pretendard', sans-serif;
   outline: none;
   text-align: center;
   transition: var(--transition-base);

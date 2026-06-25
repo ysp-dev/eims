@@ -1,5 +1,6 @@
-@font-face { font-family:'Noto Sans KR'; font-style:normal; font-weight:300; font-display:swap; src:url('fonts/NotoSansKR-300.ttf') format('truetype'); }
-@font-face { font-family:'Noto Sans KR'; font-style:normal; font-weight:400; font-display:swap; src:url('fonts/NotoSansKR-400.ttf') format('truetype'); }
-@font-face { font-family:'Noto Sans KR'; font-style:normal; font-weight:500; font-display:swap; src:url('fonts/NotoSansKR-500.ttf') format('truetype'); }
-@font-face { font-family:'Noto Sans KR'; font-style:normal; font-weight:600; font-display:swap; src:url('fonts/NotoSansKR-600.ttf') format('truetype'); }
-@font-face { font-family:'Noto Sans KR'; font-style:normal; font-weight:700; font-display:swap; src:url('fonts/NotoSansKR-700.ttf') format('truetype'); }
+/* Pretendard — Windows ClearType에서도 선명하게 렌더링되는 한글 폰트로 교체 (Noto Sans KR은 윈도우에서 뭉개짐) */
+@font-face { font-family:'Pretendard'; font-style:normal; font-weight:300; font-display:swap; src:local('Pretendard Light'),    url('fonts/Pretendard-300.woff2') format('woff2'); }
+@font-face { font-family:'Pretendard'; font-style:normal; font-weight:400; font-display:swap; src:local('Pretendard Regular'),  url('fonts/Pretendard-400.woff2') format('woff2'); }
+@font-face { font-family:'Pretendard'; font-style:normal; font-weight:500; font-display:swap; src:local('Pretendard Medium'),   url('fonts/Pretendard-500.woff2') format('woff2'); }
+@font-face { font-family:'Pretendard'; font-style:normal; font-weight:600; font-display:swap; src:local('Pretendard SemiBold'), url('fonts/Pretendard-600.woff2') format('woff2'); }
+@font-face { font-family:'Pretendard'; font-style:normal; font-weight:700; font-display:swap; src:local('Pretendard Bold'),     url('fonts/Pretendard-700.woff2') format('woff2'); }

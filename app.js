@@ -1875,7 +1875,7 @@ function importEvalCSV(input) {
 // ═══════════════════════════════════════
 //  CHARTS
 // ═══════════════════════════════════════
-const TK = { color: '#51525C', font: { family: "'Noto Sans KR',sans-serif", size: 10 } };
+const TK = { color: '#51525C', font: { family: "'Pretendard',sans-serif", size: 10 } };
 const BS = {
   x: { grid: { color: 'rgba(0,0,0,.04)' }, ticks: TK, border: { color: 'transparent' } },
   y: { grid: { color: 'rgba(0,0,0,.04)' }, ticks: TK, border: { color: 'transparent' } },
@@ -1903,11 +1903,16 @@ const DL = {
           const r   = (el.innerRadius + el.outerRadius) / 2;
           if (Math.abs(el.endAngle - el.startAngle) * r < 18) return;
           ctx.save();
-          ctx.font = 'bold 11px "Noto Sans KR",sans-serif';
-          ctx.fillStyle = 'rgba(255,255,255,.92)';
+          ctx.font = 'bold 11px "Pretendard",sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText(val, el.x + r * Math.cos(mid), el.y + r * Math.sin(mid));
+          const ax = el.x + r * Math.cos(mid), ay = el.y + r * Math.sin(mid);
+          ctx.lineJoin = 'round';
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = 'rgba(0,0,0,.35)';
+          ctx.strokeText(val, ax, ay);
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillText(val, ax, ay);
           ctx.restore();
           return;
         }
@@ -1915,7 +1920,7 @@ const DL = {
         // 꺾은선: 포인트 위에 표시
         if (meta.type === 'line') {
           ctx.save();
-          ctx.font = '600 9px "Noto Sans KR",sans-serif';
+          ctx.font = '600 9px "Pretendard",sans-serif';
           ctx.fillStyle = pluginOpts?.lineColor || '#FFBC00';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'bottom';
@@ -1930,24 +1935,33 @@ const DL = {
           ? Math.abs(props.x - props.base)
           : Math.abs(props.y - props.base);
         ctx.save();
-        ctx.font = 'bold 10px "Noto Sans KR",sans-serif';
-        ctx.fillStyle = '#1D1D21';
+        ctx.font = 'bold 10px "Pretendard",sans-serif';
         ctx.textAlign = 'center';
+        let lx, ly, inSeg = true;
         if (isStacked) {
           if (barLen < 14) { ctx.restore(); return; }
           ctx.textBaseline = 'middle';
-          ctx.fillText(val,
-            isHoriz ? (props.x + props.base) / 2 : props.x,
-            isHoriz ? props.y : (props.y + props.base) / 2
-          );
+          lx = isHoriz ? (props.x + props.base) / 2 : props.x;
+          ly = isHoriz ? props.y : (props.y + props.base) / 2;
         } else if (isHoriz) {
           if (barLen < 20) { ctx.restore(); return; }
           ctx.textBaseline = 'middle';
-          ctx.fillText(val, (props.x + props.base) / 2, props.y);
+          lx = (props.x + props.base) / 2; ly = props.y;
         } else {
           ctx.textBaseline = 'bottom';
-          ctx.fillText(val, props.x, Math.min(props.y, props.base) - 2);
+          lx = props.x; ly = Math.min(props.y, props.base) - 2; inSeg = false; // 막대 위 흰 배경
         }
+        if (inSeg) {
+          // 칸 안: 흰 글씨 + 옅은 검정 외곽선으로 어떤 색(노랑 포함) 위에서도 또렷하게
+          ctx.lineJoin = 'round';
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = 'rgba(0,0,0,.35)';
+          ctx.strokeText(val, lx, ly);
+          ctx.fillStyle = '#FFFFFF';
+        } else {
+          ctx.fillStyle = '#1D1D21';
+        }
+        ctx.fillText(val, lx, ly);
         ctx.restore();
       });
     });
@@ -1957,6 +1971,8 @@ const DL = {
 function initCharts() {
   const C = window.Chart;
   if (!C) return;
+  // 캔버스를 최소 2배로 슈퍼샘플링 → 저배율(devicePixelRatio=1) 윈도우에서 글자 뭉개짐 방지
+  C.defaults.devicePixelRatio = Math.max(2, window.devicePixelRatio || 1);
   const sc = S.screen;
 
   if (sc === 'dashboard') {
@@ -2005,7 +2021,7 @@ function initCharts() {
         type: 'doughnut',
         data: { labels: ['남성', '여성'], datasets: [{ data: [mc, EMP.length - mc], backgroundColor: ['#5B9BD5', '#E84D8A'], borderWidth: 0 }] },
         plugins: [DL],
-        options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'bottom', labels: { generateLabels(chart) { const d = chart.data; return d.labels.map((lbl, i) => ({ text: `${lbl}  ${d.datasets[0].data[i]}명 (${EMP.length ? Math.round(d.datasets[0].data[i]/EMP.length*100) : 0}%)`, fillStyle: d.datasets[0].backgroundColor[i], strokeStyle: 'transparent', lineWidth: 0, hidden: false, index: i, fontColor: '#51525C' })); }, color: '#51525C', font: { family: "'Noto Sans KR',sans-serif", size: 10 }, padding: 14, boxWidth: 10 } } } },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'bottom', labels: { generateLabels(chart) { const d = chart.data; return d.labels.map((lbl, i) => ({ text: `${lbl}  ${d.datasets[0].data[i]}명 (${EMP.length ? Math.round(d.datasets[0].data[i]/EMP.length*100) : 0}%)`, fillStyle: d.datasets[0].backgroundColor[i], strokeStyle: 'transparent', lineWidth: 0, hidden: false, index: i, fontColor: '#51525C' })); }, color: '#51525C', font: { family: "'Pretendard',sans-serif", size: 10 }, padding: 14, boxWidth: 10 } } } },
       });
     }
   }
@@ -2056,9 +2072,18 @@ function initCharts() {
     const ys = Object.keys(jy).sort();
     const e8 = document.getElementById('c-join');
     if (e8 && !charts.join) {
+      // 쨍한 오렌지 그라데이션 채움 (chartArea 준비 전엔 단색 폴백)
+      const joinFill = (c) => {
+        const { ctx, chartArea } = c.chart;
+        if (!chartArea) return 'rgba(255,140,0,.12)';
+        const g = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+        g.addColorStop(0, 'rgba(255,140,0,.38)');
+        g.addColorStop(1, 'rgba(255,140,0,0)');
+        return g;
+      };
       charts.join = new C(e8, {
         type: 'line',
-        data: { labels: ys, datasets: [{ data: ys.map(y => jy[y]), borderColor: '#FFBC00', backgroundColor: 'rgba(255,188,0,.05)', pointBackgroundColor: '#D99000', pointBorderColor: '#D1D1D6', pointBorderWidth: 0.5, pointRadius: 3, tension: .4, fill: true, borderWidth: 2 }] },
+        data: { labels: ys, datasets: [{ data: ys.map(y => jy[y]), borderColor: '#FF8C00', backgroundColor: joinFill, pointBackgroundColor: '#D99000', pointBorderColor: '#D1D1D6', pointBorderWidth: 0.5, pointRadius: 3, tension: .4, fill: true, borderWidth: 2.5 }] },
         options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 18 } }, plugins: { legend: { display: false }, dl: { lineColor: '#E63946', formatter: v => `${v}명` } }, scales: BS },
         plugins: [DL],
       });
@@ -2101,7 +2126,7 @@ function initCharts() {
             const x = chart.getDatasetMeta(0).data[ji]?.x;
             if (x == null) return;
             ctx.save();
-            ctx.font = 'bold 9px "Noto Sans KR",sans-serif';
+            ctx.font = 'bold 9px "Pretendard",sans-serif';
             ctx.fillStyle = '#3A3A4C';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'bottom';
@@ -2128,7 +2153,7 @@ function initCharts() {
           maintainAspectRatio: false,
           layout: { padding: { top: 22 } },
           plugins: {
-            legend: { labels: { color: '#51525C', font: { family: "'Noto Sans KR',sans-serif", size: 10 }, padding: 14, boxWidth: 12 } },
+            legend: { labels: { color: '#51525C', font: { family: "'Pretendard',sans-serif", size: 10 }, padding: 14, boxWidth: 12 } },
             dl: { formatter: () => '' }, // 개별 세그먼트 레이블 비활성화
           },
           scales: {
@@ -2145,7 +2170,7 @@ function initCharts() {
     const baseGrade = e => e.grade ? e.grade.replace(/대우$/, '') : '';
     const tenureYears = e => (today() - new Date(e.joinDate)) / (365.25 * 24 * 3600 * 1000);
     const mean = arr => arr.length ? +(arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1) : 0;
-    const legendLbl = { color: '#51525C', font: { family: "'Noto Sans KR',sans-serif", size: 10 }, padding: 14, boxWidth: 12 };
+    const legendLbl = { color: '#51525C', font: { family: "'Pretendard',sans-serif", size: 10 }, padding: 14, boxWidth: 12 };
 
     // 1) 팀별 평균 연령·근속연수 (가로 막대, 이중 x축)
     const teamsA = sortedTeams(EMP);
