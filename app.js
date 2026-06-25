@@ -168,7 +168,7 @@ function activateScreen(screen) {
   if (screen === 'dashboard') { renderHeader(); renderDept(); }
   if (screen === 'emplist') { sortState = []; renderEmpList(); }
   if (screen === 'detail') renderDetail();
-  if (screen === 'stats')  { renderHeader(); renderStatLists(); ['age','tenure','level','dd'].forEach(k => { charts[k]?.destroy?.(); delete charts[k]; }); }
+  if (screen === 'stats')  { renderHeader(); renderStatLists(); ['age','tenure','level','dd','join','gradeup'].forEach(k => { charts[k]?.destroy?.(); delete charts[k]; }); }
   if (screen === 'evaluate') renderEvaluate();
   if (screen === 'evalcmt') renderEvalComment();
   initCharts();
@@ -565,6 +565,45 @@ function renderHeader() {
   if (femalePct) femalePct.textContent = pct(n - male) + '%';
   const retire = document.getElementById('kpi-retire');
   if (retire) retire.textContent = EMP.filter(e => today().getFullYear() - Number(e.birthYear) >= RETIRE_AGE - RETIRE_NEAR).length + '명';
+
+  // ── 이번 달 생일자 KPI
+  const thisMonth = today().getMonth() + 1; // 1~12
+  const birthdayEmps = EMP.filter(e => {
+    if (!e.birth) return false;
+    const m = e.birth.match(/^\d{4}-(\d{2})-(\d{2})$/);
+    return m && Number(m[1]) === thisMonth;
+  }).sort((a, b) => {
+    const da = a.birth ? a.birth.slice(5) : '';
+    const db = b.birth ? b.birth.slice(5) : '';
+    return da.localeCompare(db);
+  });
+  const kpiBirthday = document.getElementById('kpi-birthday');
+  if (kpiBirthday) kpiBirthday.textContent = birthdayEmps.length;
+
+  // ── 이번 달 생일자 목록 위젯
+  const MONTH_NAMES = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  const birthdaySub = document.getElementById('birthday-sub');
+  if (birthdaySub) birthdaySub.textContent = `${MONTH_NAMES[thisMonth - 1]} 기준 · ${birthdayEmps.length}명`;
+  const birthdayList = document.getElementById('birthday-list');
+  if (birthdayList) {
+    if (!birthdayEmps.length) {
+      birthdayList.innerHTML = '<div style="text-align:center;color:#8E8E93;font-size:12px;padding:20px 0">이번 달 생일자 없음</div>';
+    } else {
+      const ROW = 'border-bottom:1px solid #F2F2F7';
+      const TD  = (txt, style='') => `<td style="padding:6px 8px;font-size:11px;color:#2C2C2E;${style}">${esc(String(txt ?? '-'))}</td>`;
+      const TH  = (txt) => `<th style="padding:5px 8px;font-size:10px;color:#636366;font-weight:500;text-align:left;border-bottom:1px solid #E5E5EA;position:sticky;top:0;background:#fff">${txt}</th>`;
+      birthdayList.innerHTML = `<table style="width:100%;border-collapse:collapse">
+        <thead><tr>${TH('성명')}${TH('팀')}${TH('직위')}${TH('생년월일')}${TH('만나이')}</tr></thead>
+        <tbody>${birthdayEmps.map(e => `<tr style="${ROW}">
+          ${TD(e.name, 'font-weight:500;color:#1C1C1E')}
+          ${TD(e.team)}
+          ${TD(e.pos)}
+          ${TD(e.birth, 'color:#E84D8A;font-weight:500')}
+          ${TD(calcAge(e.birthYear, e.birth) + '세')}
+        </tr>`).join('')}</tbody>
+      </table>`;
+    }
+  }
 
   const stTotal = document.getElementById('st-total');
   if (stTotal) stTotal.textContent = n;
@@ -1940,15 +1979,28 @@ function initCharts() {
       });
     }
 
+    const GRADE_ORDER = ['L4', 'L3', 'L3대우', 'L2', 'L2대우', 'L1', 'L1대우'];
     const gC = {};
     EMP.forEach(e => { gC[e.grade] = (gC[e.grade] || 0) + 1; });
+    const gLabels = GRADE_ORDER.filter(g => gC[g]);
     const e2 = document.getElementById('c-grade');
     if (e2 && !charts.grade) {
+      const pctFmt = (v) => { const n = EMP.length; return n ? `${v}명 (${Math.round(v/n*100)}%)` : `${v}명`; };
       charts.grade = new C(e2, {
-        type: 'doughnut',
-        data: { labels: Object.keys(gC), datasets: [{ data: Object.values(gC), backgroundColor: Object.keys(gC).map(dashGradeColor), borderWidth: 0 }] },
+        type: 'bar',
+        data: {
+          labels: gLabels,
+          datasets: [{ data: gLabels.map(g => gC[g]), backgroundColor: gLabels.map(dashGradeColor), borderWidth: 0, borderRadius: 4 }],
+        },
         plugins: [DL],
-        options: { responsive: true, maintainAspectRatio: false, cutout: '66%', plugins: { legend: { position: 'right', labels: { generateLabels(chart) { const d = chart.data; return d.labels.map((lbl, i) => ({ text: `${lbl}  ${d.datasets[0].data[i]}명`, fillStyle: d.datasets[0].backgroundColor[i], strokeStyle: 'transparent', lineWidth: 0, hidden: false, index: i, fontColor: '#51525C' })); }, color: '#51525C', font: { family: "'Noto Sans KR',sans-serif", size: 10 }, padding: 10, boxWidth: 10 } } } },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          layout: { padding: { right: 10 } },
+          plugins: { legend: { display: false }, dl: { formatter: pctFmt } },
+          scales: { x: BS.x, y: { ...BS.y, grid: { display: false } } },
+        },
       });
     }
 
@@ -1960,19 +2012,6 @@ function initCharts() {
         data: { labels: ['남성', '여성'], datasets: [{ data: [mc, EMP.length - mc], backgroundColor: ['#5B9BD5', '#E84D8A'], borderWidth: 0 }] },
         plugins: [DL],
         options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'bottom', labels: { generateLabels(chart) { const d = chart.data; return d.labels.map((lbl, i) => ({ text: `${lbl}  ${d.datasets[0].data[i]}명 (${EMP.length ? Math.round(d.datasets[0].data[i]/EMP.length*100) : 0}%)`, fillStyle: d.datasets[0].backgroundColor[i], strokeStyle: 'transparent', lineWidth: 0, hidden: false, index: i, fontColor: '#51525C' })); }, color: '#51525C', font: { family: "'Noto Sans KR',sans-serif", size: 10 }, padding: 14, boxWidth: 10 } } } },
-      });
-    }
-
-    const jy = {};
-    EMP.forEach(e => { const y = e.joinDate.slice(0, 4); jy[y] = (jy[y] || 0) + 1; });
-    const ys = Object.keys(jy).sort();
-    const e4 = document.getElementById('c-join');
-    if (e4 && !charts.join) {
-      charts.join = new C(e4, {
-        type: 'line',
-        data: { labels: ys, datasets: [{ data: ys.map(y => jy[y]), borderColor: '#FFBC00', backgroundColor: 'rgba(255,188,0,.05)', pointBackgroundColor: '#FFBC00', pointBorderColor: '#1A1A24', pointRadius: 3, tension: .4, fill: true, borderWidth: 2 }] },
-        options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 18 } }, plugins: { legend: { display: false } }, scales: BS },
-        plugins: [DL],
       });
     }
   }
@@ -2063,6 +2102,96 @@ function initCharts() {
         data: { labels: lk, datasets: [{ data: lk.map(l => lv[l]), backgroundColor: lk.map((_, i) => lc[i % lc.length]), borderWidth: 0, borderRadius: 4 }] },
         options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 18 } }, plugins: { legend: { display: false }, dl: { formatter: pctFmt } }, scales: BS },
         plugins: [DL],
+      });
+    }
+
+    // ── 연도별 입행 현황 (지우고 stats로 이동)
+    const jy = {};
+    EMP.forEach(e => { const y = e.joinDate.slice(0, 4); jy[y] = (jy[y] || 0) + 1; });
+    const ys = Object.keys(jy).sort();
+    const e8 = document.getElementById('c-join');
+    if (e8 && !charts.join) {
+      charts.join = new C(e8, {
+        type: 'line',
+        data: { labels: ys, datasets: [{ data: ys.map(y => jy[y]), borderColor: '#FFBC00', backgroundColor: 'rgba(255,188,0,.05)', pointBackgroundColor: '#FFBC00', pointBorderColor: '#1A1A24', pointRadius: 3, tension: .4, fill: true, borderWidth: 2 }] },
+        options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 18 } }, plugins: { legend: { display: false } }, scales: BS },
+        plugins: [DL],
+      });
+    }
+
+    // ── 직급승격 연도별 현황 — 직급(L1~L4)별 stacked bar
+    const PROMO_GRADES = ['L2', 'L3', 'L4'];
+    const promoYearGrade = {}; // { year: { grade: count } }
+    EMP.forEach(e => {
+      if (!e.gradeUpDate || !e.grade) return;
+      const m = e.gradeUpDate.match(/^(\d{4})/);
+      if (!m) return;
+      const y = m[1];
+      const g = e.grade.replace(/대우$/, ''); // 대우 제거해서 기본 직급으로 집계
+      if (!PROMO_GRADES.includes(g)) return;
+      if (!promoYearGrade[y]) promoYearGrade[y] = {};
+      promoYearGrade[y][g] = (promoYearGrade[y][g] || 0) + 1;
+    });
+    const promoYears = Object.keys(promoYearGrade).sort();
+    const e9 = document.getElementById('c-gradeup');
+    if (e9 && !charts.gradeup) {
+      // 스택 위에 "L2:X L3:Y L4:Z" 한 줄 레이블 플러그인
+      const gradeupTopLabel = {
+        id: 'gradeupTopLabel',
+        afterDatasetsDraw(chart) {
+          const ctx = chart.ctx;
+          chart.data.labels.forEach((_, ji) => {
+            let topY = Infinity;
+            const parts = [];
+            chart.data.datasets.forEach((ds, di) => {
+              const val = ds.data[ji];
+              if (!val) return;
+              const meta = chart.getDatasetMeta(di);
+              if (meta.hidden) return;
+              const bar = meta.data[ji];
+              if (bar && bar.y < topY) topY = bar.y;
+              parts.push(`${ds.label}:${val}`);
+            });
+            if (!parts.length || topY === Infinity) return;
+            const x = chart.getDatasetMeta(0).data[ji]?.x;
+            if (x == null) return;
+            ctx.save();
+            ctx.font = 'bold 9px "Noto Sans KR",sans-serif';
+            ctx.fillStyle = '#3A3A4C';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(parts.join('  '), x, topY - 3);
+            ctx.restore();
+          });
+        },
+      };
+
+      charts.gradeup = new C(e9, {
+        type: 'bar',
+        data: {
+          labels: promoYears,
+          datasets: PROMO_GRADES.map(g => ({
+            label: g,
+            backgroundColor: dashGradeColor(g),
+            borderWidth: 0,
+            borderRadius: 2,
+            data: promoYears.map(y => (promoYearGrade[y] && promoYearGrade[y][g]) || 0),
+          })),
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          layout: { padding: { top: 22 } },
+          plugins: {
+            legend: { labels: { color: '#51525C', font: { family: "'Noto Sans KR',sans-serif", size: 10 }, padding: 14, boxWidth: 12 } },
+            dl: { formatter: () => '' }, // 개별 세그먼트 레이블 비활성화
+          },
+          scales: {
+            x: { stacked: true, grid: { display: false }, ticks: TK, border: { color: 'transparent' } },
+            y: { stacked: true, ...BS.y },
+          },
+        },
+        plugins: [DL, gradeupTopLabel],
       });
     }
   }

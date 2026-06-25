@@ -67,7 +67,7 @@
 
     <!-- ══ DASHBOARD ══ -->
     <div id="screen-dashboard" class="screen active">
-      <div class="kpi-grid">
+      <div class="kpi-grid kpi-grid-4">
         <div class="kpi-card">
           <div class="kpi-ico" style="background:rgba(255,188,0,.1)">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFBC00" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -81,6 +81,13 @@
           </div>
           <span class="kpi-lbl">평균 근속연수</span>
           <div class="kpi-val" id="kpi-avg"></div>
+        </div>
+        <div class="kpi-card birthday">
+          <div class="kpi-ico" style="background:rgba(232,77,138,.1)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E84D8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 1 3 3c0 1.5-1.5 3-3 4.5C10.5 8 9 6.5 9 5a3 3 0 0 1 3-3z"/><rect x="2" y="10" width="20" height="12" rx="2"/><line x1="2" y1="15" x2="22" y2="15"/><line x1="7" y1="10" x2="7" y2="22"/><line x1="12" y1="10" x2="12" y2="22"/><line x1="17" y1="10" x2="17" y2="22"/></svg>
+          </div>
+          <span class="kpi-lbl">이번 달 생일자</span>
+          <div class="kpi-val"><span id="kpi-birthday"></span><span class="kpi-unit">명</span></div>
         </div>
         <div class="kpi-card alert">
           <div class="kpi-ico" style="background:rgba(244,102,0,.14)">
@@ -97,9 +104,17 @@
       </div>
       <div class="dept-grid" id="dept-cards"></div>
 
-      <div class="ch-grid-12">
+      <div class="ch-grid-12" style="margin-bottom:16px">
         <div class="ch-card"><div class="ch-title">성별 비율</div><div class="ch-sub">남성 / 여성 비율</div><div style="height:145px;position:relative"><canvas id="c-gender"></canvas></div></div>
-        <div class="ch-card"><div class="ch-title">연도별 입행 현황</div><div class="ch-sub">연도별 신규 입행 인원 추이</div><div style="height:145px;position:relative"><canvas id="c-join"></canvas></div></div>
+        <div class="ch-card" id="birthday-widget">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <div>
+              <div class="ch-title">🎂 이번 달 생일자</div>
+              <div class="ch-sub" id="birthday-sub"></div>
+            </div>
+          </div>
+          <div id="birthday-list" style="max-height:150px;overflow-y:auto"></div>
+        </div>
       </div>
     </div>
 
@@ -227,6 +242,10 @@
         <div class="ch-title">팀별 직급 구성 비교</div>
         <div class="ch-sub">팀별 직급 분포 현황</div>
         <div style="height:250px;position:relative"><canvas id="c-dept-detail"></canvas></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-top:13px">
+        <div class="ch-card"><div class="ch-title">연도별 입행 현황</div><div class="ch-sub">연도별 신규 입행 인원 추이</div><div style="height:170px;position:relative"><canvas id="c-join"></canvas></div></div>
+        <div class="ch-card"><div class="ch-title">직급승격 연도별 현황</div><div class="ch-sub">현직급 승격일(gradeUpDate) 기준 연도별 인원</div><div style="height:170px;position:relative"><canvas id="c-gradeup"></canvas></div></div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-top:13px">
         <div class="ch-card">

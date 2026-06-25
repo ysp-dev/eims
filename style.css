@@ -251,6 +251,9 @@ select option { background: var(--bg-card); color: var(--text-primary); }
   gap: 16px;
   margin-bottom: 20px;
 }
+.kpi-grid-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
 .kpi-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
@@ -273,6 +276,13 @@ select option { background: var(--bg-card); color: var(--text-primary); }
 .kpi-card.alert:hover {
   border-color: rgba(244, 102, 0, 0.4);
   box-shadow: 0 10px 25px -5px rgba(244, 102, 0, 0.08);
+}
+.kpi-card.birthday {
+  border-color: rgba(232, 77, 138, 0.18);
+}
+.kpi-card.birthday:hover {
+  border-color: rgba(232, 77, 138, 0.45);
+  box-shadow: 0 12px 24px -4px rgba(232, 77, 138, 0.18), var(--shadow-lg);
 }
 .kpi-lbl {
   font-size: 13px;
