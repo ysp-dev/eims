@@ -169,6 +169,7 @@
               <th class="sortable" data-click="sortBy" data-sort="pos">직위</th>
               <th class="c sortable" data-click="sortBy" data-sort="grade">직급</th>
               <th class="sortable" data-click="sortBy" data-sort="title">호칭</th>
+              <th>통합기수</th>
               <th class="sortable" data-click="sortBy" data-sort="joinDate">입행일</th>
               <th class="sortable" data-click="sortBy" data-sort="tenure">근속기간</th>
               <th class="c sortable" data-click="sortBy" data-sort="birthYear">출생년도</th>
@@ -249,6 +250,11 @@
 
     <!-- ══ EVALUATION ══ -->
     <div id="screen-evaluate" class="screen">
+      <!-- 일반직원 / 전문직무직원 탭 -->
+      <div class="eval-tab-bar">
+        <button class="eval-tab-btn active" data-click="switchEvalTab" data-tab="regular">일반직원</button>
+        <button class="eval-tab-btn" data-click="switchEvalTab" data-tab="spec">전문직무직원</button>
+      </div>
       <!-- 등급별 목표 비율 설정 -->
       <div class="eval-ratio-card">
         <!-- 평가대상 기간 선택 -->
@@ -259,7 +265,7 @@
         <div class="eval-ratio-head">
           <div>
             <div class="ch-title">등급별 목표 비율</div>
-            <div class="ch-sub">전체 <b id="eval-total">0</b>명(부장 제외) 기준 · 등급별 비율(%, 소수점 첫째자리)을 입력하면 인원수가 자동 배분됩니다. 합계는 100%가 되어야 합니다.</div>
+            <div class="ch-sub">전체 <b id="eval-total">0</b>명(평가제외 제외) 기준 · 등급별 비율(%, 소수점 첫째자리)을 입력하면 인원수가 자동 배분됩니다. 합계는 100%가 되어야 합니다.</div>
           </div>
           <div class="eval-ratio-actions">
             <div class="eval-sum-box">합계 <span id="eval-ratio-sum">0.0</span>% · 할당 <b id="eval-alloc-total">0</b>명</div>
@@ -332,7 +338,8 @@
     <div class="pw-title" id="eval-modal-title">검증 불일치</div>
     <div class="pw-sub" id="eval-modal-msg"></div>
     <div class="pw-actions">
-      <button class="pw-btn p" data-click="closeEvalModal">확인</button>
+      <button class="pw-btn" id="eval-modal-close" data-click="closeEvalModal">확인</button>
+      <button class="pw-btn p" id="eval-modal-confirm" data-click="doEvalModalConfirm" style="display:none">확정하기</button>
     </div>
   </div>
 </div>

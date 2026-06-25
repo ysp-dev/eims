@@ -59,11 +59,12 @@ const GI = {
 };
 function gi(g) { return GI[g] || GI['L1']; }
 
-const TEAM_ORDER = ['여신심사팀', '여신업무팀', '여신관리팀', '외환팀', '상품/신용평가팀', 'PPR팀'];
+const TEAM_ORDER = ['여신심사', '여신업무', '여신관리', '외환', '상품/신용평가', 'PPR'];
 function sortedTeams(emp) {
+  const norm = t => t.replace(/팀$/, '');
   const all = [...new Set(emp.map(e => e.team))];
   return all.sort((a, b) => {
-    const ia = TEAM_ORDER.indexOf(a), ib = TEAM_ORDER.indexOf(b);
+    const ia = TEAM_ORDER.indexOf(norm(a)), ib = TEAM_ORDER.indexOf(norm(b));
     if (ia === -1 && ib === -1) return a.localeCompare(b, 'ko');
     return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
   });
@@ -86,7 +87,13 @@ const EVAL_GRADES = [
   { key: 'A', label: '우수',     color: '#2E8B57' },
   { key: 'G', label: '양호',     color: '#3B7DD8' },
   { key: 'C', label: '노력필요', color: '#C77A2E' },
-  { key: 'D', label: '부진',     color: '#C0282F' },
+  { key: 'D', label: '개선필요', color: '#C0282F' },
+];
+const EVAL_RATIO_GROUPS = [
+  { key: 'S',  label: '탁월',             color: '#B38600', grades: ['S'] },
+  { key: 'A',  label: '우수',             color: '#2E8B57', grades: ['A'] },
+  { key: 'G',  label: '양호',             color: '#3B7DD8', grades: ['G'] },
+  { key: 'CD', label: '노력필요+개선필요', color: '#C0282F', grades: ['C', 'D'] },
 ];
 // 평가기간: 시작연도(2025 상반기)부터 기준일(오늘)이 속한 반기까지만 생성한다.
 // 미래 반기는 미리 만들지 않고, 새 반기가 도래하면 다음 접속 시 TODAY 기준으로 자동 포함된다.
@@ -104,7 +111,7 @@ const EVAL_PERIODS = (() => {
 })();
 // ratios: 등급별 목표 비율(%), data: { 직원번호: { 평가기간: 등급 } }, mult: { 직원번호: 배수횟수 }
 // confirmed: { 평가기간: true } — 최종 확정되어 수정 잠긴 기간
-const EVAL = { ratios: { S: 0, A: 0, G: 0, C: 0, D: 0 }, data: {}, mult: {}, awards: {}, comments: {}, confirmed: {}, loaded: false, periodInit: false };
+const EVAL = { ratios: { S: 0, A: 0, G: 0, CD: 0 }, ratiosSpec: { S: 0, A: 0, G: 0, CD: 0 }, tab: 'regular', data: {}, mult: {}, awards: {}, comments: {}, confirmed: {}, excluded: {}, loaded: false, periodInit: false };
 
 function av(name, sz = 27) {
   const safe = String(name || '?');
@@ -584,6 +591,7 @@ function renderEmpList() {
       <td style="color:#2C2C2E">${esc(e.pos)}</td>
       <td class="c">${gtag(e.grade)}</td>
       <td style="color:#2C2C2E">${esc(e.title)}</td>
+      <td style="color:#3A3A3C">${esc(e.cohort || extractCohort(e.etc)) || '-'}</td>
       <td style="color:#3A3A3C">${esc(e.joinDate)}</td>
       <td style="color:#3A3A3C;font-size:11px">${calcYears(e.joinDate)}</td>
       <td class="c" style="color:#3A3A3C">${esc(e.birthYear)}</td>
@@ -591,7 +599,7 @@ function renderEmpList() {
       <td style="color:#3A3A3C">${esc(e.birth)}</td>
       <td class="c" style="color:${gc}">${esc(e.gender)}</td>
       <td style="color:#3A3A3C">${esc(e.gradeUpDate) || '-'}</td>
-      <td class="c" style="color:#1C1C1E">${esc(e.gradeLevel)}</td>
+      <td class="c" style="color:#1C1C1E">${isSpec ? '-' : esc(e.gradeLevel)}</td>
       <td style="color:#3A3A3C">${esc(e.gradeSetDate) || '-'}</td>
       <td style="color:#3A3A3C">${esc(e.gradeNextDate) || '-'}</td>
       <td class="edu-col" style="color:#3A3A3C">${esc(e.preSchool) || '-'}</td>
@@ -638,7 +646,7 @@ function renderDetail() {
         <div style="display:flex;gap:7px;flex-wrap:wrap">
           ${gtag(emp.grade)}
           <span style="font-size:11px;color:#636366;background:#F2F2F7;padding:4px 12px;border-radius:20px">직원번호 ${esc(emp.empNo)}</span>
-          <span style="font-size:11px;color:#636366;background:#F2F2F7;padding:4px 12px;border-radius:20px">등급 ${esc(emp.gradeLevel)}</span>
+          ${emp.pos !== '전문직무직원' ? `<span style="font-size:11px;color:#636366;background:#F2F2F7;padding:4px 12px;border-radius:20px">등급 ${esc(emp.gradeLevel)}</span>` : ''}
         </div>
       </div>
     </div>
@@ -656,11 +664,12 @@ function renderDetail() {
       <div class="det-row"><span class="det-lbl">성별</span><span style="font-size:12px;color:${gc};font-weight:500">${emp.gender === '남' ? '남성' : '여성'}</span></div>
       <div class="det-row"><span class="det-lbl">직위</span><span class="det-val">${esc(emp.pos)}</span></div>
       <div class="det-row"><span class="det-lbl">호칭</span><span class="det-val">${esc(emp.title)}</span></div>
+      <div class="det-row"><span class="det-lbl">통합기수</span><span class="det-val">${esc(emp.cohort) || esc(extractCohort(emp.etc)) || '-'}</span></div>
     </div>
     <div class="det-card">
       <div class="det-sec" style="color:#E63946">직급 정보</div>
       <div class="det-row"><span class="det-lbl">직급</span>${gtag(emp.grade)}</div>
-      <div class="det-row"><span class="det-lbl">등급</span><span class="det-val">${esc(emp.gradeLevel)}</span></div>
+      ${emp.pos !== '전문직무직원' ? `<div class="det-row"><span class="det-lbl">등급</span><span class="det-val">${esc(emp.gradeLevel)}</span></div>` : ''}
       <div class="det-row"><span class="det-lbl">현직급 승격일</span><span class="det-val">${esc(emp.gradeUpDate) || '-'}</span></div>
       <div class="det-row"><span class="det-lbl">현등급 책정일</span><span class="det-val">${esc(emp.gradeSetDate) || '-'}</span></div>
       <div class="det-row"><span class="det-lbl">차기등급일</span><span class="det-val">${esc(emp.gradeNextDate) || '-'}</span></div>
@@ -725,6 +734,7 @@ function emptyEmployee() {
     postSchool: '',
     postMajor: '',
     etc: '',
+    cohort: '',
   };
 }
 
@@ -788,13 +798,14 @@ function renderEmployeeForm(emp, mode) {
         ${fs('ef-gender', '성별', FIELD_OPTIONS.gender, emp.gender)}
         ${fs('ef-pos', '직위', FIELD_OPTIONS.pos, emp.pos)}
         ${fs('ef-title', '호칭', FIELD_OPTIONS.title, emp.title)}
+        ${f('ef-cohort', '통합기수', emp.cohort)}
       </div>
     </div>
     <div class="det-card">
       <div class="det-sec" style="color:#E63946">직급 정보</div>
       <div class="edt-grid">
         ${fs('ef-grade', '직급', FIELD_OPTIONS.grade, emp.grade)}
-        ${f('ef-gradeLevel', '등급', emp.gradeLevel, 'type="number" min="1"')}
+        ${emp.pos !== '전문직무직원' ? f('ef-gradeLevel', '등급', emp.gradeLevel, 'type="number" min="1"') : ''}
         ${f('ef-gradeUpDate', '현직급 승격일', emp.gradeUpDate, 'placeholder="YYYY-MM-DD"')}
         ${f('ef-gradeSetDate', '현등급 책정일', emp.gradeSetDate, 'placeholder="YYYY-MM-DD"')}
         ${f('ef-gradeNextDate', '차기등급일', emp.gradeNextDate, 'placeholder="YYYY-MM-DD"')}
@@ -836,6 +847,7 @@ function readEmployeeForm(base) {
     gender: v('ef-gender'),
     pos: v('ef-pos'),
     title: v('ef-title'),
+    cohort: v('ef-cohort'),
     grade: v('ef-grade'),
     gradeLevel: vi('ef-gradeLevel') || base.gradeLevel || 1,
     gradeUpDate: v('ef-gradeUpDate'),
@@ -964,8 +976,17 @@ function renderDept() {
 // ═══════════════════════════════════════
 function evalGrade(key) { return EVAL_GRADES.find(g => g.key === key); }
 
-// 평가 대상(부장 제외) 직원
-function evalEligible() { return EMP.filter(e => e.pos !== '부장'); }
+// 현재 탭 기준 목표 비율 객체 반환
+function currentRatios() { return EVAL.tab === 'spec' ? EVAL.ratiosSpec : EVAL.ratios; }
+
+// 기타 필드에서 '통합XX기' 추출
+function extractCohort(etc) { const m = (etc || '').match(/통합\d+기/); return m ? m[0] : ''; }
+
+// 평가 대상 (탭별 분리 + 평가제외 제외)
+function evalEligible() {
+  if (EVAL.tab === 'spec') return EMP.filter(e => e.pos === '전문직무직원' && !EVAL.excluded[e.empNo]);
+  return EMP.filter(e => e.pos !== '부장' && e.pos !== '전문직무직원' && !EVAL.excluded[e.empNo]);
+}
 
 // 서버에서 평가 데이터를 1회 불러온다 (이후 메모리에 유지)
 async function ensureEvaluations() {
@@ -973,12 +994,24 @@ async function ensureEvaluations() {
   try {
     const res = await apiRequest('/api/evaluations');
     const ev = res.evaluations || {};
-    EVAL.ratios = { S: 0, A: 0, G: 0, C: 0, D: 0, ...(ev.ratios || {}) };
+    const rawRatios = ev.ratios || {};
+    if ('CD' in rawRatios) {
+      EVAL.ratios = { S: 0, A: 0, G: 0, CD: 0, ...rawRatios };
+    } else {
+      EVAL.ratios = { S: rawRatios.S || 0, A: rawRatios.A || 0, G: rawRatios.G || 0, CD: (rawRatios.C || 0) + (rawRatios.D || 0) };
+    }
     EVAL.data = ev.evals || {};
     EVAL.mult = ev.mult || {};
     EVAL.awards = ev.awards || {};
     EVAL.comments = ev.comments || {};
     EVAL.confirmed = ev.confirmed || {};
+    EVAL.excluded = ev.excluded || {};
+    const rawRatiosSpec = ev.ratiosSpec || {};
+    if ('CD' in rawRatiosSpec) {
+      EVAL.ratiosSpec = { S: 0, A: 0, G: 0, CD: 0, ...rawRatiosSpec };
+    } else {
+      EVAL.ratiosSpec = { S: rawRatiosSpec.S || 0, A: rawRatiosSpec.A || 0, G: rawRatiosSpec.G || 0, CD: (rawRatiosSpec.C || 0) + (rawRatiosSpec.D || 0) };
+    }
     EVAL.loaded = true;
     return true;
   } catch (_) { return false; } // 로드 실패: EVAL.loaded=false 유지 → 렌더/저장 차단
@@ -1065,8 +1098,10 @@ function renderEvalHead() {
       <th rowspan="2">직원번호</th>
       <th class="eval-pos" rowspan="2">직위</th>
       <th class="c" rowspan="2">직급</th>
-      <th class="c" rowspan="2">(현직급)<br>표창갯수</th>
-      <th class="c" rowspan="2">배수횟수</th>
+      <th class="c eval-col-cohort" rowspan="2">통합기수</th>
+      <th class="c eval-col-award" rowspan="2">(현직급)<br>표창갯수</th>
+      <th class="c eval-col-mult" rowspan="2">배수횟수</th>
+      <th class="c" rowspan="2">평가<br>제외</th>
       ${yearGroups}
     </tr>
     <tr>${subs}</tr>`;
@@ -1109,12 +1144,14 @@ function activePeriodLabel() {
 function renderEvalRatioGrid() {
   const grid = document.getElementById('eval-ratio-grid');
   if (!grid) return;
-  grid.innerHTML = EVAL_GRADES.map(g => `
+  grid.innerHTML = EVAL_RATIO_GROUPS.map(g => `
     <div class="erg-item" style="border-color:${g.color}44">
-      <span class="erg-badge" style="color:${g.color};background:${g.color}1f">${g.key}</span>
-      <span class="erg-label">${g.label}</span>
+      ${g.key === 'CD'
+        ? `<span class="erg-badge" style="color:${g.color};background:${g.color}1f">C</span><span class="erg-label">노력필요</span><span class="erg-badge" style="color:${g.color};background:${g.color}1f;margin-left:4px">D</span><span class="erg-label">개선필요</span>`
+        : `<span class="erg-badge" style="color:${g.color};background:${g.color}1f">${g.key}</span><span class="erg-label">${g.label}</span>`
+      }
       <input id="erg-${g.key}" class="erg-input" type="number" min="0" max="100" step="0.1"
-        value="${EVAL.ratios[g.key] ?? 0}" data-input="evalRatioInput" data-grade="${g.key}">
+        value="${currentRatios()[g.key] ?? 0}" data-input="evalRatioInput" data-grade="${g.key}">
       <span class="erg-pct">%</span>
       <span class="erg-alloc"><b id="erg-alloc-${g.key}">0</b>명 <span class="erg-calc" id="erg-calc-${g.key}">(0.0%)</span></span>
     </div>`).join('');
@@ -1128,7 +1165,7 @@ function updateEvalRatioUI() {
   const eligible = evalEligible().length;
   const ratios = {};
   let sum = 0;
-  EVAL_GRADES.forEach(g => {
+  EVAL_RATIO_GROUPS.forEach(g => {
     const inp = document.getElementById('erg-' + g.key);
     let v = inp ? parseFloat(inp.value) : 0;
     if (!Number.isFinite(v) || v < 0) v = 0;
@@ -1139,7 +1176,7 @@ function updateEvalRatioUI() {
 
   const alloc = evalAllocate(eligible, ratios);
   let allocTotal = 0;
-  EVAL_GRADES.forEach(g => {
+  EVAL_RATIO_GROUPS.forEach(g => {
     const n = alloc[g.key] || 0;
     allocTotal += n;
     const aEl = document.getElementById('erg-alloc-' + g.key);
@@ -1169,17 +1206,17 @@ function onEvalRatioInput(el) {
 //  - 합계 100% → 최대잔여법으로 정확히 인원수에 맞춤(합 = 전체)
 //  - 합계 ≠ 100% → 등급별 단순 반올림(참고용)
 function evalAllocate(total, ratios) {
-  const sum = Math.round(EVAL_GRADES.reduce((s, g) => s + (Number(ratios[g.key]) || 0), 0) * 10) / 10;
+  const sum = Math.round(EVAL_RATIO_GROUPS.reduce((s, g) => s + (Number(ratios[g.key]) || 0), 0) * 10) / 10;
   if (Math.abs(sum - 100) < 0.05) return evalQuota(total, ratios);
   const a = {};
-  EVAL_GRADES.forEach(g => { a[g.key] = Math.round(total * (Number(ratios[g.key]) || 0) / 100); });
+  EVAL_RATIO_GROUPS.forEach(g => { a[g.key] = Math.round(total * (Number(ratios[g.key]) || 0) / 100); });
   return a;
 }
 
 async function saveEvalRatios() {
   let sum = 0;
   const next = {};
-  for (const g of EVAL_GRADES) {
+  for (const g of EVAL_RATIO_GROUPS) {
     const inp = document.getElementById('erg-' + g.key);
     let v = inp ? parseFloat(inp.value) : 0;
     if (!Number.isFinite(v) || v < 0) v = 0;
@@ -1192,7 +1229,7 @@ async function saveEvalRatios() {
     alert(`등급별 비율의 합계가 100%가 되어야 합니다. (현재 ${sum.toFixed(1)}%)`);
     return;
   }
-  EVAL.ratios = next;
+  if (EVAL.tab === 'spec') EVAL.ratiosSpec = next; else EVAL.ratios = next;
   try {
     await persistEvaluations();
     updateEvalConfirmBar();
@@ -1207,7 +1244,9 @@ function renderEvalTeamFilter() {
   const sel = document.getElementById('eval-flt-team');
   if (!sel) return;
   const cur = sel.value || 'all';
-  const teams = sortedTeams(EMP);
+  const isSpec = EVAL.tab === 'spec';
+  const tabEmps = EMP.filter(e => isSpec ? e.pos === '전문직무직원' : (e.pos !== '부장' && e.pos !== '전문직무직원'));
+  const teams = sortedTeams(tabEmps);
   sel.innerHTML = '<option value="all">전체 팀</option>' +
     teams.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
   sel.value = teams.includes(cur) || cur === 'all' ? cur : 'all';
@@ -1216,8 +1255,9 @@ function renderEvalTeamFilter() {
 function evalFiltered() {
   const s = document.getElementById('eval-srch')?.value || '';
   const t = document.getElementById('eval-flt-team')?.value || 'all';
+  const isSpec = EVAL.tab === 'spec';
   return EMP.filter(e => {
-    if (e.pos === '부장') return false; // 부장은 평가 대상에서 제외
+    if (isSpec ? e.pos !== '전문직무직원' : (e.pos === '부장' || e.pos === '전문직무직원')) return false;
     if (s && !e.name.includes(s) && !e.empNo.includes(s) && !e.team.includes(s)) return false;
     if (t !== 'all' && e.team !== t) return false;
     return true;
@@ -1300,15 +1340,17 @@ function renderEvalTable() {
   const tbody = document.getElementById('eval-tbody');
   if (!tbody) return;
   tbody.innerHTML = list.map((e, i) => `
-    <tr data-dblclick="openEvalComment" data-empno="${esc(e.empNo)}" title="더블클릭: 종합평가의견 입력">
+    <tr data-dblclick="openEvalComment" data-empno="${esc(e.empNo)}" class="${EVAL.excluded[e.empNo] ? 'eval-excluded-row' : ''}" title="더블클릭: 종합평가의견 입력">
       <td class="c" style="color:#48484A">${i + 1}</td>
       <td style="color:#1C1C1E">${esc(e.team)}</td>
       <td><div style="display:flex;align-items:center;gap:7px">${av(e.name, 22)}<span style="color:#1C1C1E;font-weight:500">${esc(e.name)}</span></div></td>
       <td style="color:#48484A;font-size:11px">${esc(e.empNo)}</td>
       <td class="eval-pos" style="color:#1C1C1E" title="${esc(e.pos)}">${esc(e.pos)}</td>
       <td class="c">${gtag(e.grade)}</td>
-      <td class="c">${evalAwardCell(e.empNo)}</td>
-      <td class="c">${evalMultCell(e.empNo)}</td>
+      <td class="c eval-col-cohort" style="font-size:11px;color:#48484A">${esc(e.cohort || extractCohort(e.etc)) || '-'}</td>
+      <td class="c eval-col-award">${evalAwardCell(e.empNo)}</td>
+      <td class="c eval-col-mult">${evalMultCell(e.empNo)}</td>
+      <td class="c"><input type="checkbox" class="eval-excl" data-change="toggleEvalExclude" data-empno="${esc(e.empNo)}" ${EVAL.excluded[e.empNo] ? 'checked' : ''} title="평가 제외 여부"></td>
       ${EVAL_PERIODS.map(p => evalCell(e.empNo, p.key)).join('')}
     </tr>`).join('');
 }
@@ -1365,22 +1407,6 @@ function setEvalGrade(el) {
     return;
   }
 
-  // 활성 평가대상 기간이면 등급별 목표 정원(quota) 초과 입력을 차단
-  if (val && period === activePeriodKey()) {
-    const v = evalValidate(period);
-    if (v.quotaOk) {
-      const after = v.counts[val] + (prev === val ? 0 : 1); // 이번 선택 반영 후 해당 등급 인원
-      if (after > v.quota[val]) {
-        el.value = prev;                       // 마지막 입력 되돌림(선택 해제/이전값)
-        el.className = evalSelClass(prev, period);
-        const g = evalGrade(val);
-        showEvalModal('등급 인원 초과',
-          `${val}(${g.label}) 등급의 목표 인원 ${v.quota[val]}명을 모두 채웠습니다.\n목표 비율을 초과하여 선택할 수 없습니다.`);
-        return;
-      }
-    }
-  }
-
   if (!EVAL.data[empNo]) EVAL.data[empNo] = {};
   if (val) EVAL.data[empNo][period] = val;
   else delete EVAL.data[empNo][period];
@@ -1392,8 +1418,8 @@ function setEvalGrade(el) {
 
 // ── 비율 대비 등급 입력 검증 ──
 // 목표 비율을 평가대상 인원에 최대잔여법으로 정수 배분 → 등급별 정원(quota)
-function evalQuota(total, ratios = EVAL.ratios) {
-  const parts = EVAL_GRADES.map(g => {
+function evalQuota(total, ratios = currentRatios()) {
+  const parts = EVAL_RATIO_GROUPS.map(g => {
     const exact = total * (Number(ratios[g.key]) || 0) / 100;
     return { key: g.key, floor: Math.floor(exact), rem: exact - Math.floor(exact) };
   });
@@ -1407,14 +1433,19 @@ function evalQuota(total, ratios = EVAL.ratios) {
 
 function evalValidate(period) {
   const eligible = evalEligible();
-  const counts = { S: 0, A: 0, G: 0, C: 0, D: 0 };
-  eligible.forEach(e => { const g = EVAL.data[e.empNo]?.[period]; if (g && counts[g] !== undefined) counts[g]++; });
-  const sum = Math.round(EVAL_GRADES.reduce((s, g) => s + (EVAL.ratios[g.key] || 0), 0) * 10) / 10;
+  const counts = { S: 0, A: 0, G: 0, CD: 0 };
+  eligible.forEach(e => {
+    const g = EVAL.data[e.empNo]?.[period];
+    if (!g) return;
+    if (g === 'C' || g === 'D') counts.CD++;
+    else if (counts[g] !== undefined) counts[g]++;
+  });
+  const sum = Math.round(EVAL_RATIO_GROUPS.reduce((s, g) => s + (currentRatios()[g.key] || 0), 0) * 10) / 10;
   const quotaOk = Math.abs(sum - 100) < 0.05;
   const quota = evalQuota(eligible.length);
-  const assigned = EVAL_GRADES.reduce((s, g) => s + counts[g.key], 0);
+  const assigned = EVAL_RATIO_GROUPS.reduce((s, g) => s + counts[g.key], 0);
   let over = null, exact = true;
-  EVAL_GRADES.forEach(g => {
+  EVAL_RATIO_GROUPS.forEach(g => {
     if (counts[g.key] > quota[g.key]) over = g.key;
     if (counts[g.key] !== quota[g.key]) exact = false;
   });
@@ -1437,7 +1468,7 @@ function updateEvalConfirmBar() {
       statusEl.innerHTML = `<span class="ecf-ok">목표 비율과 일치 — 확정 가능</span>`;
     } else {
       const remain = v.eligible - v.assigned;
-      const detail = EVAL_GRADES.map(g => {
+      const detail = EVAL_RATIO_GROUPS.map(g => {
         const c = v.counts[g.key], q = v.quota[g.key];
         return `<span class="${c === q ? 'ecf-g-ok' : 'ecf-g-no'}">${g.key} ${c}/${q}</span>`;
       }).join('');
@@ -1457,29 +1488,43 @@ function onEvalPeriodChange() {
   updateEvalConfirmBar();
 }
 
+function ratiosUnsaved() {
+  return EVAL_RATIO_GROUPS.some(g => {
+    const inp = document.getElementById('erg-' + g.key);
+    const live = Math.round((parseFloat(inp?.value) || 0) * 10) / 10;
+    return live !== (currentRatios()[g.key] || 0);
+  });
+}
+
 function confirmEvalPeriod() {
   const period = activePeriodKey();
   const label = activePeriodLabel();
   const wasConfirmed = !!EVAL.confirmed[period];
+  if (!wasConfirmed && ratiosUnsaved()) {
+    alert('목표 비율이 저장되지 않았습니다. 비율 저장 후 다시 시도해 주세요.');
+    return;
+  }
   if (wasConfirmed) {
     if (!confirm(`${label} 확정을 취소하시겠습니까?\n취소하면 해당 기간을 다시 수정할 수 있습니다.`)) return;
     delete EVAL.confirmed[period];
   } else {
     const v = evalValidate(period);
-    if (!v.match) {
-      showEvalModal('확정할 수 없습니다',
-        `${label} 평가를 확정하려면 아래 항목을 먼저 해결해 주세요.`, evalConfirmErrors(v));
-      return;
+    const doConfirm = () => {
+      EVAL.confirmed[period] = true;
+      persistEvaluations()
+        .then(() => { renderEvalTable(); updateEvalConfirmBar(); flashEvalSaved('확정 완료'); })
+        .catch(e => { delete EVAL.confirmed[period]; alert(e.message); });
+    };
+    if (v.match) {
+      showEvalModal('목표 비율 일치', `${label} 등급 배분이 목표 비율과 일치합니다. 확정하시겠습니까?`, null, '확정하기', doConfirm);
+    } else {
+      showEvalModal('목표 비율 불일치', `${label} 등급 배분이 목표 비율과 일치하지 않습니다. 그래도 확정하시겠습니까?`, evalConfirmErrors(v), '그래도 확정', doConfirm);
     }
-    if (!confirm(`${label} 평가를 최종 확정하시겠습니까?\n확정 후에는 해당 기간 등급이 잠깁니다.`)) return;
-    EVAL.confirmed[period] = true;
+    return;
   }
   persistEvaluations()
-    .then(() => { renderEvalTable(); updateEvalConfirmBar(); flashEvalSaved(wasConfirmed ? '확정 취소됨' : '확정 완료'); })
-    .catch(e => {
-      if (wasConfirmed) EVAL.confirmed[period] = true; else delete EVAL.confirmed[period]; // 저장 실패 시 원복
-      alert(e.message);
-    });
+    .then(() => { renderEvalTable(); updateEvalConfirmBar(); flashEvalSaved('확정 취소됨'); })
+    .catch(e => { EVAL.confirmed[period] = true; alert(e.message); });
 }
 
 // 확정 불가 사유 목록 생성 (목표 비율 미설정 / 미입력 / 등급별 인원 초과·부족)
@@ -1488,7 +1533,7 @@ function evalConfirmErrors(v) {
   const errs = [];
   const remain = v.eligible - v.assigned;
   if (remain > 0) errs.push(`미입력 인원이 ${remain}명 있습니다. (입력 ${v.assigned}명 / 전체 ${v.eligible}명)`);
-  EVAL_GRADES.forEach(g => {
+  EVAL_RATIO_GROUPS.forEach(g => {
     const c = v.counts[g.key], q = v.quota[g.key];
     if (c !== q) errs.push(`${g.key}(${g.label}) 등급: 입력 ${c}명 · 목표 ${q}명 — ${c > q ? `${c - q}명 초과` : `${q - c}명 부족`}`);
   });
@@ -1496,7 +1541,8 @@ function evalConfirmErrors(v) {
 }
 
 // items가 있으면 목록(ul)으로, 없으면 단순 메시지로 표시
-function showEvalModal(title, msg, items) {
+let _evalModalCb = null;
+function showEvalModal(title, msg, items, confirmLabel, confirmCb) {
   const t = document.getElementById('eval-modal-title');
   const m = document.getElementById('eval-modal-msg');
   if (t) t.textContent = title;
@@ -1508,9 +1554,22 @@ function showEvalModal(title, msg, items) {
       m.textContent = msg;
     }
   }
+  const closeBtn = document.getElementById('eval-modal-close');
+  const confirmBtn = document.getElementById('eval-modal-confirm');
+  _evalModalCb = confirmCb || null;
+  if (confirmBtn) {
+    if (confirmCb) { confirmBtn.textContent = confirmLabel || '확정하기'; confirmBtn.style.display = ''; }
+    else confirmBtn.style.display = 'none';
+  }
+  if (closeBtn) closeBtn.textContent = confirmCb ? '취소' : '확인';
   document.getElementById('eval-modal')?.classList.add('show');
 }
-function closeEvalModal() { document.getElementById('eval-modal')?.classList.remove('show'); }
+function closeEvalModal() { _evalModalCb = null; document.getElementById('eval-modal')?.classList.remove('show'); }
+function doEvalModalConfirm() {
+  document.getElementById('eval-modal')?.classList.remove('show');
+  const cb = _evalModalCb; _evalModalCb = null;
+  if (cb) cb();
+}
 
 // ── 종합평가의견: 직원 행 더블클릭 → 별도 화면에서 연도/반기별 의견 보기·입력 ──
 let cmtEmpNo = null;
@@ -1578,8 +1637,33 @@ async function persistEvaluations() {
   if (!EVAL.loaded) throw new Error('평가 데이터가 로드되지 않아 저장할 수 없습니다. 새로고침 후 다시 시도하세요.'); // 빈 상태 덮어쓰기 방지
   await apiRequest('/api/evaluations', {
     method: 'PUT',
-    body: JSON.stringify({ ratios: EVAL.ratios, evals: EVAL.data, mult: EVAL.mult, awards: EVAL.awards, comments: EVAL.comments, confirmed: EVAL.confirmed }),
+    body: JSON.stringify({ ratios: EVAL.ratios, ratiosSpec: EVAL.ratiosSpec, evals: EVAL.data, mult: EVAL.mult, awards: EVAL.awards, comments: EVAL.comments, confirmed: EVAL.confirmed, excluded: EVAL.excluded }),
   });
+}
+
+function switchEvalTab(el) {
+  const tab = el.dataset.tab;
+  if (!tab || EVAL.tab === tab) return;
+  EVAL.tab = tab;
+  document.querySelectorAll('.eval-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.getElementById('eval-table')?.classList.toggle('tab-spec', tab === 'spec');
+  renderEvalRatioGrid();
+  renderEvalTeamFilter();
+  renderEvalTable();
+  updateEvalConfirmBar();
+}
+
+function toggleEvalExclude(el) {
+  const empNo = el.dataset.empno;
+  if (el.checked) EVAL.excluded[empNo] = true;
+  else delete EVAL.excluded[empNo];
+  const totalEl = document.getElementById('eval-total');
+  if (totalEl) totalEl.textContent = evalEligible().length;
+  updateEvalRatioUI();
+  updateEvalConfirmBar();
+  const row = el.closest('tr');
+  if (row) row.classList.toggle('eval-excluded-row', !!EVAL.excluded[empNo]);
+  scheduleEvalSave();
 }
 
 let evalFlashTimer = null;
@@ -1614,23 +1698,32 @@ function showEvalToast(msg) {
 const EVAL_CSV_PERIOD = Object.fromEntries(EVAL_PERIODS.map(p => [p.label.replace(/\s/g, ''), p.key]));
 // 헤더명 → 평가기간 키 매핑 (종합의견 열은 등급 열과 별도, '…종합의견' 접미)
 const EVAL_CSV_COMMENT = Object.fromEntries(Object.entries(EVAL_CSV_PERIOD).map(([k, v]) => [`${k}종합의견`, v]));
-const EVAL_CSV_HEADERS = ['팀', '성명', '직원번호', '직위', '직급', '(현직급)표창갯수', '배수횟수', ...Object.keys(EVAL_CSV_PERIOD), ...Object.keys(EVAL_CSV_COMMENT)];
+function evalCsvHeaders() {
+  const base = ['팀', '성명', '직원번호', '직위', '직급'];
+  if (EVAL.tab !== 'spec') base.push('(현직급)표창갯수', '배수횟수');
+  return [...base, ...Object.keys(EVAL_CSV_PERIOD), ...Object.keys(EVAL_CSV_COMMENT)];
+}
 
 function exportEvalCSV() {
-  const list = sortEmpList(evalEligible()); // 화면 필터와 무관하게 평가대상(부장 제외) 전원 내보내기
+  const isSpec = EVAL.tab === 'spec';
+  const list = sortEmpList(evalEligible());
   const rows = list.map(e => csvRow([
-    e.team, e.name, e.empNo, e.pos, e.grade, EVAL.awards[e.empNo] ?? 0, EVAL.mult[e.empNo] ?? 0,
+    e.team, e.name, e.empNo, e.pos, e.grade,
+    ...(isSpec ? [] : [EVAL.awards[e.empNo] ?? 0, EVAL.mult[e.empNo] ?? 0]),
     ...EVAL_PERIODS.map(p => EVAL.data[e.empNo]?.[p.key] || ''),
     ...EVAL_PERIODS.map(p => EVAL.comments[e.empNo]?.[p.key] || ''),
   ]));
-  triggerDownload([csvRow(EVAL_CSV_HEADERS), ...rows].join('\n'), 'EIMS_평가.csv');
+  const fname = isSpec ? 'EIMS_평가_전문직무직원.csv' : 'EIMS_평가_일반직원.csv';
+  triggerDownload([csvRow(evalCsvHeaders()), ...rows].join('\n'), fname);
 }
 
 function downloadEvalTemplate() {
+  const isSpec = EVAL.tab === 'spec';
   const grades = EVAL_PERIODS.map((_, i) => i === 0 ? 'S' : i === 1 ? 'A' : '');
   const comments = EVAL_PERIODS.map((_, i) => i === 0 ? '목표를 초과 달성함' : i === 1 ? '핵심 성과 우수' : '');
-  const ex = ['여신심사팀', '홍길동', '1234567', '팀원', 'L2', 2, 3, ...grades, ...comments];
-  triggerDownload([csvRow(EVAL_CSV_HEADERS), csvRow(ex)].join('\n'), 'EIMS_평가_템플릿.csv');
+  const base = isSpec ? ['여신심사팀', '홍길동', '1234567', '전문직무직원', 'L2'] : ['여신심사팀', '홍길동', '1234567', '팀원', 'L2', 2, 3];
+  const fname = isSpec ? 'EIMS_평가_템플릿_전문직무직원.csv' : 'EIMS_평가_템플릿_일반직원.csv';
+  triggerDownload([csvRow(evalCsvHeaders()), csvRow([...base, ...grades, ...comments])].join('\n'), fname);
 }
 
 // 직원번호로 매칭하여 등급/배수횟수를 반영. 확정(잠금)된 기간은 보호하고 건너뛴다.
@@ -1654,19 +1747,21 @@ function importEvalCSV(input) {
     const commentIdx = {};
     hdr.forEach((h, i) => { if (EVAL_CSV_COMMENT[h]) commentIdx[EVAL_CSV_COMMENT[h]] = i; });
 
-    const known = new Set(EMP.map(e => e.empNo));
+    const known = new Set(evalEligible().map(e => e.empNo)); // 현재 탭 대상만
     let applied = 0, unknown = 0, lockedHit = false, badGrade = 0;
     rows.slice(1).forEach(vals => {
       const empNo = (vals[empNoIdx] || '').trim();
       if (!empNo) return;
       if (!known.has(empNo)) { unknown++; return; }
-      if (multIdx >= 0) {
-        const m = (vals[multIdx] || '').replace(/[^\d]/g, '').slice(-1);
-        if (m !== '') EVAL.mult[empNo] = Number(m); // 빈칸은 기존값 보존 ('0' 입력 시에만 0)
-      }
-      if (awardIdx >= 0) {
-        const a = (vals[awardIdx] || '').replace(/[^\d]/g, '').slice(0, 2);
-        if (a !== '') EVAL.awards[empNo] = Math.min(99, Number(a)); // 빈칸은 기존값 보존
+      if (EVAL.tab !== 'spec') {
+        if (multIdx >= 0) {
+          const m = (vals[multIdx] || '').replace(/[^\d]/g, '').slice(-1);
+          if (m !== '') EVAL.mult[empNo] = Number(m);
+        }
+        if (awardIdx >= 0) {
+          const a = (vals[awardIdx] || '').replace(/[^\d]/g, '').slice(0, 2);
+          if (a !== '') EVAL.awards[empNo] = Math.min(99, Number(a));
+        }
       }
       Object.entries(periodIdx).forEach(([pk, ci]) => {
         if (EVAL.confirmed[pk]) { lockedHit = true; return; } // 확정 기간 보호
@@ -1938,8 +2033,8 @@ function initCharts() {
 // ═══════════════════════════════════════
 //  CSV 내보내기 / 가져오기 / 템플릿
 // ═══════════════════════════════════════
-const CSV_HEADERS = ['No','부서','팀','성명','직원번호','직위','직급','호칭','입행일','출생년도','생년월일','성별','현직급승격일','등급','현등급책정일','차기등급일','입행전학교명','입행전전공','입행후학교명','입행후전공','기타'];
-const CSV_FIELDS  = ['no','dept','team','name','empNo','pos','grade','title','joinDate','birthYear','birth','gender','gradeUpDate','gradeLevel','gradeSetDate','gradeNextDate','preSchool','preMajor','postSchool','postMajor','etc'];
+const CSV_HEADERS = ['No','부서','팀','성명','직원번호','직위','직급','호칭','통합기수','입행일','출생년도','생년월일','성별','현직급승격일','등급','현등급책정일','차기등급일','입행전학교명','입행전전공','입행후학교명','입행후전공','기타'];
+const CSV_FIELDS  = ['no','dept','team','name','empNo','pos','grade','title','cohort','joinDate','birthYear','birth','gender','gradeUpDate','gradeLevel','gradeSetDate','gradeNextDate','preSchool','preMajor','postSchool','postMajor','etc'];
 
 function csvRow(vals) {
   return vals.map(v => {
@@ -2074,12 +2169,15 @@ const ACTIONS = {
   evalPeriodChange: () => onEvalPeriodChange(),
   confirmEvalPeriod: () => confirmEvalPeriod(),
   closeEvalModal: () => closeEvalModal(),
+  doEvalModalConfirm: () => doEvalModalConfirm(),
   submitEvalAuth: () => submitEvalAuth(),
   closeEvalAuth: () => closeEvalAuth(),
   handleEvalAuthKey: (el, ev) => handleEvalAuthKey(el, ev),
   exportEvalCSV: () => exportEvalCSV(),
   downloadEvalTemplate: () => downloadEvalTemplate(),
   importEvalCSV: el => importEvalCSV(el),
+  toggleEvalExclude: el => toggleEvalExclude(el),
+  switchEvalTab: el => switchEvalTab(el),
   openEvalComment: el => openEvalComment(el),
   saveEvalComment: () => saveEvalComment(),
   backToEval: () => activateScreen('evaluate'), // 평가 재인증 없이 목록 복귀

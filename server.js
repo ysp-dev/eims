@@ -213,8 +213,9 @@ function saveEmployees(employees) {
 }
 
 // ── 인사평가(평가하기) 저장소 ──
-// { ratios: {S,A,G,C,D}, evals: { [직원번호]: { [평가기간]: 등급 } }, mult: { [직원번호]: 배수횟수 }, confirmed: { [평가기간]: true } }
+// { ratios: {S,A,G,CD}, evals: { [직원번호]: { [평가기간]: 등급 } }, mult: { [직원번호]: 배수횟수 }, confirmed: { [평가기간]: true }, excluded: { [직원번호]: true } }
 const EVAL_GRADE_KEYS = ['S', 'A', 'G', 'C', 'D'];
+const EVAL_RATIO_KEYS = ['S', 'A', 'G', 'CD'];
 // 평가기간 키 검증: 클라이언트가 TODAY 기준으로 상한 없이 생성하므로(app.js EVAL_PERIODS)
 // 서버도 고정 목록 대신 형식+하한(시작연도)으로 검증한다. 미래 반기까지 무한 허용해도
 // 클라이언트가 만들지 않는 기간은 들어오지 않으므로 안전하고, 화이트리스트 누락에 의한 무성 데이터 유실이 없다.
@@ -225,15 +226,41 @@ const isEvalPeriod = p => {
 };
 
 function emptyEvaluations() {
-  return { ratios: { S: 0, A: 0, G: 0, C: 0, D: 0 }, evals: {}, mult: {}, awards: {}, comments: {}, confirmed: {} };
+  return { ratios: { S: 0, A: 0, G: 0, CD: 0 }, ratiosSpec: { S: 0, A: 0, G: 0, CD: 0 }, evals: {}, mult: {}, awards: {}, comments: {}, confirmed: {}, excluded: {} };
 }
 
 // 외부 입력(파일/요청)을 신뢰 가능한 형태로 정규화: 허용된 등급/기간만, 비율은 0 이상 소수 1자리
 function normalizeEvaluations(input) {
   const ratios = {};
-  for (const g of EVAL_GRADE_KEYS) {
-    const n = Number(input?.ratios?.[g]);
-    ratios[g] = Number.isFinite(n) && n >= 0 ? Math.round(n * 10) / 10 : 0;
+  const rawRatios = input?.ratios || {};
+  if ('CD' in rawRatios) {
+    for (const g of EVAL_RATIO_KEYS) {
+      const n = Number(rawRatios[g]);
+      ratios[g] = Number.isFinite(n) && n >= 0 ? Math.round(n * 10) / 10 : 0;
+    }
+  } else {
+    // 구버전 C/D 분리 형식 → CD로 마이그레이션
+    for (const g of ['S', 'A', 'G']) {
+      const n = Number(rawRatios[g]);
+      ratios[g] = Number.isFinite(n) && n >= 0 ? Math.round(n * 10) / 10 : 0;
+    }
+    const c = Number(rawRatios['C']), d = Number(rawRatios['D']);
+    ratios['CD'] = Math.round(((Number.isFinite(c) && c >= 0 ? c : 0) + (Number.isFinite(d) && d >= 0 ? d : 0)) * 10) / 10;
+  }
+  const ratiosSpec = {};
+  const rawRatiosSpec = input?.ratiosSpec || {};
+  if ('CD' in rawRatiosSpec) {
+    for (const g of EVAL_RATIO_KEYS) {
+      const n = Number(rawRatiosSpec[g]);
+      ratiosSpec[g] = Number.isFinite(n) && n >= 0 ? Math.round(n * 10) / 10 : 0;
+    }
+  } else {
+    for (const g of ['S', 'A', 'G']) {
+      const n = Number(rawRatiosSpec[g]);
+      ratiosSpec[g] = Number.isFinite(n) && n >= 0 ? Math.round(n * 10) / 10 : 0;
+    }
+    const c = Number(rawRatiosSpec['C']), d = Number(rawRatiosSpec['D']);
+    ratiosSpec['CD'] = Math.round(((Number.isFinite(c) && c >= 0 ? c : 0) + (Number.isFinite(d) && d >= 0 ? d : 0)) * 10) / 10;
   }
   const evals = {};
   const src = input?.evals && typeof input.evals === 'object' ? input.evals : {};
@@ -278,7 +305,13 @@ function normalizeEvaluations(input) {
   for (const [p, v] of Object.entries(cSrc)) {
     if (isEvalPeriod(p) && v) confirmed[p] = true;
   }
-  return { ratios, evals, mult, awards, comments, confirmed };
+  // 평가 제외 직원 (직원번호 키, true 값)
+  const excluded = {};
+  const exSrc = input?.excluded && typeof input.excluded === 'object' ? input.excluded : {};
+  for (const [empNo, v] of Object.entries(exSrc)) {
+    if (v) excluded[String(empNo)] = true;
+  }
+  return { ratios, ratiosSpec, evals, mult, awards, comments, confirmed, excluded };
 }
 
 function loadEvaluations() {
@@ -320,6 +353,7 @@ function normalizeEmployee(input, fallback = {}) {
     postSchool: String(input.postSchool || '').trim(),
     postMajor: String(input.postMajor || '').trim(),
     etc: String(input.etc || '').trim(),
+    cohort: String(input.cohort || '').trim(),
   };
 }
 
