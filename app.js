@@ -53,9 +53,9 @@ const GI = {
   'L3':    { c: '#E63946', b: 'rgba(230,57,70,.15)' },
   'L2':    { c: '#F9A825', b: 'rgba(249,168,37,.15)' },
   'L1':    { c: '#8080A0', b: 'rgba(128,128,160,.15)' },
-  'L3대우': { c: '#E84D8A', b: 'rgba(232,77,138,.15)' },
-  'L2대우': { c: '#7C4DFF', b: 'rgba(124,77,255,.15)' },
-  'L1대우': { c: '#26C6DA', b: 'rgba(38,198,218,.15)' },
+  'L3대우': { c: '#E63946', b: 'rgba(230,57,70,.15)' },
+  'L2대우': { c: '#F9A825', b: 'rgba(249,168,37,.15)' },
+  'L1대우': { c: '#8080A0', b: 'rgba(128,128,160,.15)' },
 };
 function gi(g) { return GI[g] || GI['L1']; }
 
@@ -75,9 +75,9 @@ const DASH_GRADE_COLORS = {
   'L3': '#D05D64',
   'L2': '#D5A944',
   'L1': '#8A8DA5',
-  'L3대우': '#C9639D',
-  'L2대우': '#8966D0',
-  'L1대우': '#49B7C0',
+  'L3대우': '#D05D64',
+  'L2대우': '#D5A944',
+  'L1대우': '#8A8DA5',
 };
 function dashGradeColor(g) { return DASH_GRADE_COLORS[g] || DASH_GRADE_COLORS['L1']; }
 
@@ -590,12 +590,11 @@ function renderEmpList() {
   tbody.innerHTML = list.map((e, i) => {
     const gc = e.gender === '남' ? '#5B9BD5' : '#E84D8A';
     const isSpec = e.pos === '전문직무직원';
-    const db = isSpec ? `<span class="db s">${esc(e.pos)}</span>` : '';
     return `<tr data-dblclick="openDetail" data-empno="${esc(e.empNo)}">
       <td class="c" style="color:#8E8E93">${i + 1}</td>
       <td style="color:#2C2C2E">${esc(e.dept)}</td>
       <td style="color:#2C2C2E">${esc(e.team)}</td>
-      <td><div style="display:flex;align-items:center;gap:7px">${av(e.name, 22)}<span style="color:#1C1C1E;font-weight:500">${esc(e.name)}</span>${db}</div></td>
+      <td><div style="display:flex;align-items:center;gap:7px">${av(e.name, 22)}<span style="color:#1C1C1E;font-weight:500">${esc(e.name)}</span></div></td>
       <td style="color:#8E8E93;font-size:11px">${esc(e.empNo)}</td>
       <td style="color:#2C2C2E">${esc(e.pos)}</td>
       <td class="c">${gtag(e.grade)}</td>

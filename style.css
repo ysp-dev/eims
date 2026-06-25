@@ -264,8 +264,8 @@ select option { background: var(--bg-card); color: var(--text-primary); }
 }
 .kpi-card:hover {
   transform: translateY(-3px);
-  box-shadow: var(--shadow-lg);
-  border-color: var(--border-hover);
+  box-shadow: 0 12px 24px -4px rgba(255, 188, 0, 0.28), var(--shadow-lg);
+  border-color: rgba(255, 188, 0, 0.85);
 }
 .kpi-card.alert {
   border-color: rgba(244, 102, 0, 0.2);
@@ -331,7 +331,8 @@ select option { background: var(--bg-card); color: var(--text-primary); }
   transition: var(--transition-base);
 }
 .ch-card:hover {
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 12px 24px -4px rgba(255, 188, 0, 0.2), var(--shadow-lg);
+  border-color: rgba(255, 188, 0, 0.75);
 }
 .ch-title {
   font-size: 14px;
@@ -418,7 +419,7 @@ tbody tr {
   transition: var(--transition-base);
 }
 tbody tr:hover {
-  background: var(--kb-yellow-subtle);
+  background: rgba(255, 188, 0, 0.2);
 }
 tbody tr:hover td {
   color: var(--text-primary);
@@ -608,8 +609,8 @@ tbody tr:hover .row-actions {
 }
 .dept-card:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
-  border-color: var(--border-hover);
+  box-shadow: 0 10px 20px -4px rgba(255, 188, 0, 0.2), var(--shadow-lg);
+  border-color: rgba(255, 188, 0, 0.85);
 }
 .dept-hd {
   display: flex;
@@ -662,7 +663,8 @@ tbody tr:hover .row-actions {
 }
 .stats-card:hover {
   transform: translateY(-3px);
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 12px 24px -4px rgba(255, 188, 0, 0.28), var(--shadow-lg);
+  border-color: rgba(255, 188, 0, 0.85);
 }
 .stats-ico {
   width: 46px;
@@ -1286,8 +1288,8 @@ select.edt-inp {
 }
 .erg-item:hover {
   background: #FFFFFF;
-  box-shadow: var(--shadow-sm);
-  border-color: var(--border-hover);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(255, 188, 0, 0.85);
 }
 .erg-badge {
   font-size: 12px;
