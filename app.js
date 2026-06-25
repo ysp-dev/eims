@@ -1916,7 +1916,7 @@ const DL = {
         if (meta.type === 'line') {
           ctx.save();
           ctx.font = '600 9px "Noto Sans KR",sans-serif';
-          ctx.fillStyle = '#FFBC00';
+          ctx.fillStyle = pluginOpts?.lineColor || '#FFBC00';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'bottom';
           ctx.fillText(val, el.x, el.y - 5);
@@ -1968,7 +1968,7 @@ function initCharts() {
       charts.dept = new C(e1, {
         type: 'bar',
         data: { labels: Object.keys(dC), datasets: [{ data: Object.values(dC), backgroundColor: Object.keys(dC).map((_, i) => DASH_TEAM_COLORS[i % DASH_TEAM_COLORS.length]), borderWidth: 0, borderRadius: 5 }] },
-        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: BS.x, y: { ...BS.y, grid: { display: false } } } },
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, dl: { formatter: v => `${v}명` } }, scales: { x: BS.x, y: { ...BS.y, grid: { display: false } } } },
         plugins: [DL],
       });
     }
@@ -2059,7 +2059,7 @@ function initCharts() {
       charts.join = new C(e8, {
         type: 'line',
         data: { labels: ys, datasets: [{ data: ys.map(y => jy[y]), borderColor: '#FFBC00', backgroundColor: 'rgba(255,188,0,.05)', pointBackgroundColor: '#FFBC00', pointBorderColor: '#1A1A24', pointRadius: 3, tension: .4, fill: true, borderWidth: 2 }] },
-        options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 18 } }, plugins: { legend: { display: false } }, scales: BS },
+        options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 18 } }, plugins: { legend: { display: false }, dl: { lineColor: '#1D1D21', formatter: v => `${v}명` } }, scales: BS },
         plugins: [DL],
       });
     }
@@ -2202,7 +2202,7 @@ function initCharts() {
           responsive: true, maintainAspectRatio: false,
           plugins: {
             legend: { labels: legendLbl },
-            dl: { formatter: (v, chart, di, ji) => { const t = chart.data.datasets.reduce((s, d) => s + (d.data[ji] || 0), 0); return t ? `${v} (${Math.round(v/t*100)}%)` : `${v}`; } },
+            dl: { formatter: (v, chart, di, ji) => { const t = chart.data.datasets.reduce((s, d) => s + (d.data[ji] || 0), 0); return t ? `${v}명 (${Math.round(v/t*100)}%)` : `${v}명`; } },
           },
           scales: { x: { stacked: true, grid: { display: false }, ticks: TK, border: { color: 'transparent' } }, y: { stacked: true, ...BS.y } },
         },
@@ -2213,16 +2213,18 @@ function initCharts() {
     // 4) 팀별 직급 구성 비율 (100% 누적 가로 막대)
     const e13 = document.getElementById('c-team-grade-pct');
     if (e13 && !charts.teamGradePct) {
+      // [grade][team] 인원수 — 분모는 L1~L4 기준직급 보유자(대우 포함)만
+      const tgCnt = GBASE.map(g => teamsA.map(t => EMP.filter(e => e.team === t && baseGrade(e) === g).length));
+      const tgDen = teamsA.map(t => EMP.filter(e => e.team === t && GBASE.includes(baseGrade(e))).length);
       charts.teamGradePct = new C(e13, {
         type: 'bar',
-        data: { labels: teamsA, datasets: GBASE.map(g => ({
+        data: { labels: teamsA, datasets: GBASE.map((g, gi) => ({
           label: g, backgroundColor: dashGradeColor(g), borderWidth: 0, borderRadius: 2,
-          // 분모는 L1~L4 기준직급 보유자(대우 포함)만 — 직급 없는 직원이 있어도 합 100% 유지
-          data: teamsA.map(t => { const es = EMP.filter(e => e.team === t && GBASE.includes(baseGrade(e))); return es.length ? +(es.filter(e => baseGrade(e) === g).length / es.length * 100).toFixed(1) : 0; }),
+          data: teamsA.map((_, ti) => tgDen[ti] ? +(tgCnt[gi][ti] / tgDen[ti] * 100).toFixed(1) : 0),
         })) },
         options: {
           indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { labels: legendLbl }, dl: { formatter: v => `${Math.round(v)}%` } },
+          plugins: { legend: { labels: legendLbl }, dl: { formatter: (v, chart, di, ji) => `${tgCnt[di][ji]}명 (${Math.round(v)}%)` } },
           scales: {
             x: { stacked: true, max: 100, grid: { display: false }, ticks: { ...TK, callback: v => v + '%' }, border: { color: 'transparent' } },
             y: { stacked: true, ...BS.y, grid: { display: false } },
