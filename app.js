@@ -69,15 +69,15 @@ function sortedTeams(emp) {
     return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
   });
 }
-const DASH_TEAM_COLORS = ['#D05C6F', '#D98545', '#4EAF72', '#4E82C2', '#8A63C7', '#42B3AD'];
+const DASH_TEAM_COLORS = ['#E65C7B', '#FF9F43', '#10AC84', '#2E86DE', '#8395A7', '#00D2D3'];
 const DASH_GRADE_COLORS = {
-  'L4': '#4F86D6',
-  'L3': '#D05D64',
-  'L2': '#D5A944',
-  'L1': '#8A8DA5',
-  'L3대우': '#D05D64',
-  'L2대우': '#D5A944',
-  'L1대우': '#8A8DA5',
+  'L4': '#0066FF',
+  'L3': '#E63946',
+  'L2': '#FF9F00',
+  'L1': '#8E8F9A',
+  'L3대우': '#E63946',
+  'L2대우': '#FF9F00',
+  'L1대우': '#8E8F9A',
 };
 function dashGradeColor(g) { return DASH_GRADE_COLORS[g] || DASH_GRADE_COLORS['L1']; }
 
@@ -1842,10 +1842,10 @@ function importEvalCSV(input) {
 // ═══════════════════════════════════════
 //  CHARTS
 // ═══════════════════════════════════════
-const TK = { color: '#48484A', font: { family: "'Noto Sans KR',sans-serif", size: 10 } };
+const TK = { color: '#51525C', font: { family: "'Noto Sans KR',sans-serif", size: 10 } };
 const BS = {
-  x: { grid: { color: 'rgba(0,0,0,.06)' }, ticks: TK, border: { color: 'transparent' } },
-  y: { grid: { color: 'rgba(0,0,0,.06)' }, ticks: TK, border: { color: 'transparent' } },
+  x: { grid: { color: 'rgba(0,0,0,.04)' }, ticks: TK, border: { color: 'transparent' } },
+  y: { grid: { color: 'rgba(0,0,0,.04)' }, ticks: TK, border: { color: 'transparent' } },
 };
 
 // 인라인 데이터 레이블 플러그인 (외부 라이브러리 불필요)
@@ -1898,7 +1898,7 @@ const DL = {
           : Math.abs(props.y - props.base);
         ctx.save();
         ctx.font = 'bold 10px "Noto Sans KR",sans-serif';
-        ctx.fillStyle = '#1C1C1E';
+        ctx.fillStyle = '#1D1D21';
         ctx.textAlign = 'center';
         if (isStacked) {
           if (barLen < 14) { ctx.restore(); return; }
@@ -1948,7 +1948,7 @@ function initCharts() {
         type: 'doughnut',
         data: { labels: Object.keys(gC), datasets: [{ data: Object.values(gC), backgroundColor: Object.keys(gC).map(dashGradeColor), borderWidth: 0 }] },
         plugins: [DL],
-        options: { responsive: true, maintainAspectRatio: false, cutout: '66%', plugins: { legend: { position: 'right', labels: { generateLabels(chart) { const d = chart.data; return d.labels.map((lbl, i) => ({ text: `${lbl}  ${d.datasets[0].data[i]}명`, fillStyle: d.datasets[0].backgroundColor[i], strokeStyle: 'transparent', lineWidth: 0, hidden: false, index: i, fontColor: '#3A3A3C' })); }, color: '#3A3A3C', font: { family: "'Noto Sans KR',sans-serif", size: 10 }, padding: 10, boxWidth: 10 } } } },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '66%', plugins: { legend: { position: 'right', labels: { generateLabels(chart) { const d = chart.data; return d.labels.map((lbl, i) => ({ text: `${lbl}  ${d.datasets[0].data[i]}명`, fillStyle: d.datasets[0].backgroundColor[i], strokeStyle: 'transparent', lineWidth: 0, hidden: false, index: i, fontColor: '#51525C' })); }, color: '#51525C', font: { family: "'Noto Sans KR',sans-serif", size: 10 }, padding: 10, boxWidth: 10 } } } },
       });
     }
 
@@ -1959,7 +1959,7 @@ function initCharts() {
         type: 'doughnut',
         data: { labels: ['남성', '여성'], datasets: [{ data: [mc, EMP.length - mc], backgroundColor: ['#5B9BD5', '#E84D8A'], borderWidth: 0 }] },
         plugins: [DL],
-        options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'bottom', labels: { generateLabels(chart) { const d = chart.data; return d.labels.map((lbl, i) => ({ text: `${lbl}  ${d.datasets[0].data[i]}명 (${EMP.length ? Math.round(d.datasets[0].data[i]/EMP.length*100) : 0}%)`, fillStyle: d.datasets[0].backgroundColor[i], strokeStyle: 'transparent', lineWidth: 0, hidden: false, index: i, fontColor: '#3A3A3C' })); }, color: '#3A3A3C', font: { family: "'Noto Sans KR',sans-serif", size: 10 }, padding: 14, boxWidth: 10 } } } },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'bottom', labels: { generateLabels(chart) { const d = chart.data; return d.labels.map((lbl, i) => ({ text: `${lbl}  ${d.datasets[0].data[i]}명 (${EMP.length ? Math.round(d.datasets[0].data[i]/EMP.length*100) : 0}%)`, fillStyle: d.datasets[0].backgroundColor[i], strokeStyle: 'transparent', lineWidth: 0, hidden: false, index: i, fontColor: '#51525C' })); }, color: '#51525C', font: { family: "'Noto Sans KR',sans-serif", size: 10 }, padding: 14, boxWidth: 10 } } } },
       });
     }
 
@@ -1995,7 +1995,7 @@ function initCharts() {
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: {
-            legend: { labels: { color: '#48484A', font: { family: "'Noto Sans KR',sans-serif", size: 10 }, padding: 14, boxWidth: 12 } },
+            legend: { labels: { color: '#51525C', font: { family: "'Noto Sans KR',sans-serif", size: 10 }, padding: 14, boxWidth: 12 } },
             dl: { formatter: (v, chart, di, ji) => {
               const total = chart.data.datasets.reduce((s, d) => s + (d.data[ji] || 0), 0);
               return total ? `${v} (${Math.round(v/total*100)}%)` : `${v}`;
@@ -2025,7 +2025,7 @@ function initCharts() {
       const pctFmt = (v) => { const n = EMP.length; return n ? `${v}명 (${Math.round(v/n*100)}%)` : `${v}명`; };
       charts.age = new C(e5, {
         type: 'bar',
-        data: { labels: Object.keys(ab), datasets: [{ data: Object.values(ab), backgroundColor: ['#4E82C2', '#4EAF72', '#FFBC00', '#E63946'], borderWidth: 0, borderRadius: 4 }] },
+        data: { labels: Object.keys(ab), datasets: [{ data: Object.values(ab), backgroundColor: ['#3B7DD8', '#2E8B57', '#FFBC00', '#E63946'], borderWidth: 0, borderRadius: 4 }] },
         options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 18 } }, plugins: { legend: { display: false }, dl: { formatter: pctFmt } }, scales: BS },
         plugins: [DL],
       });
@@ -2045,7 +2045,7 @@ function initCharts() {
       const pctFmt = (v) => { const n = EMP.length; return n ? `${v}명 (${Math.round(v/n*100)}%)` : `${v}명`; };
       charts.tenure = new C(e6, {
         type: 'bar',
-        data: { labels: Object.keys(tb), datasets: [{ data: Object.values(tb), backgroundColor: ['#4E82C2', '#4EAF72', '#FFBC00', '#F46600', '#E63946'], borderWidth: 0, borderRadius: 4 }] },
+        data: { labels: Object.keys(tb), datasets: [{ data: Object.values(tb), backgroundColor: ['#3B7DD8', '#2E8B57', '#FFBC00', '#F46600', '#E63946'], borderWidth: 0, borderRadius: 4 }] },
         options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 18 } }, plugins: { legend: { display: false }, dl: { formatter: pctFmt } }, scales: BS },
         plugins: [DL],
       });
@@ -2056,7 +2056,7 @@ function initCharts() {
     const lk = Object.keys(lv).sort((a, b) => parseInt(b) - parseInt(a));
     const e7 = document.getElementById('c-level');
     if (e7 && !charts.level) {
-      const lc = ['#0066FF', '#E63946', '#F9A825', '#8080A0', '#7C4DFF'];
+      const lc = ['#0066FF', '#E63946', '#FF9F00', '#8E8F9A', '#7C4DFF'];
       const pctFmt = (v) => { const n = EMP.length; return n ? `${v}명 (${Math.round(v/n*100)}%)` : `${v}명`; };
       charts.level = new C(e7, {
         type: 'bar',
