@@ -2058,8 +2058,8 @@ function initCharts() {
     if (e8 && !charts.join) {
       charts.join = new C(e8, {
         type: 'line',
-        data: { labels: ys, datasets: [{ data: ys.map(y => jy[y]), borderColor: '#FFBC00', backgroundColor: 'rgba(255,188,0,.05)', pointBackgroundColor: '#FFBC00', pointBorderColor: '#1A1A24', pointRadius: 3, tension: .4, fill: true, borderWidth: 2 }] },
-        options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 18 } }, plugins: { legend: { display: false }, dl: { lineColor: '#1D1D21', formatter: v => `${v}명` } }, scales: BS },
+        data: { labels: ys, datasets: [{ data: ys.map(y => jy[y]), borderColor: '#FFBC00', backgroundColor: 'rgba(255,188,0,.05)', pointBackgroundColor: '#D99000', pointBorderColor: '#D1D1D6', pointBorderWidth: 0.5, pointRadius: 3, tension: .4, fill: true, borderWidth: 2 }] },
+        options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 18 } }, plugins: { legend: { display: false }, dl: { lineColor: '#E63946', formatter: v => `${v}명` } }, scales: BS },
         plugins: [DL],
       });
     }
