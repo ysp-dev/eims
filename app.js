@@ -10,7 +10,7 @@ const S = {
 };
 let EMP = [];
 const charts = {};
-const TODAY = new Date();
+function today() { return new Date(); }
 const EMP_PASSWORD_RULE = /^.{4,}$/; // 내부망용: 4자 이상이면 어떤 문자든 허용
 const PROTECTED_SCREENS = new Set(['dashboard', 'emplist', 'stats', 'detail', 'evaluate', 'evalcmt']);
 
@@ -27,15 +27,15 @@ function esc(v) {
 function calcAge(by, birth) {
   const n = Number(by);
   if (!n) return '-';
-  const age = TODAY.getFullYear() - n;
+  const age = today().getFullYear() - n;
   const m = birth && /^(\d{4})-(\d{2})-(\d{2})$/.exec(birth);
   if (!m) return age;
-  const passed = (TODAY.getMonth() + 1) * 100 + TODAY.getDate() >= Number(m[2]) * 100 + Number(m[3]);
+  const passed = (today().getMonth() + 1) * 100 + today().getDate() >= Number(m[2]) * 100 + Number(m[3]);
   return passed ? age : age - 1;
 }
 
 function calcYears(d) {
-  const ms = TODAY - new Date(d);
+  const ms = today() - new Date(d);
   if (!Number.isFinite(ms)) return '-'; // 잘못된 날짜는 NaN년 대신 '-'
   const y = Math.floor(ms / (365.25 * 24 * 3600 * 1000));
   const m = Math.floor((ms % (365.25 * 24 * 3600 * 1000)) / (30.44 * 24 * 3600 * 1000));
@@ -96,11 +96,11 @@ const EVAL_RATIO_GROUPS = [
   { key: 'CD', label: '노력필요+개선필요', color: '#C0282F', grades: ['C', 'D'] },
 ];
 // 평가기간: 시작연도(2025 상반기)부터 기준일(오늘)이 속한 반기까지만 생성한다.
-// 미래 반기는 미리 만들지 않고, 새 반기가 도래하면 다음 접속 시 TODAY 기준으로 자동 포함된다.
+// 미래 반기는 미리 만들지 않고, 새 반기가 도래하면 다음 접속 시 today() 기준으로 자동 포함된다.
 const EVAL_START_YEAR = 2025;
 const EVAL_PERIODS = (() => {
   const out = [];
-  const ey = TODAY.getFullYear(), eh = TODAY.getMonth() < 6 ? 1 : 2;
+  const ey = today().getFullYear(), eh = today().getMonth() < 6 ? 1 : 2;
   for (let y = EVAL_START_YEAR; y <= ey; y++) {
     for (let h = 1; h <= 2; h++) {
       if (y === ey && h > eh) break;
@@ -274,9 +274,20 @@ function doLogout() {
   document.addEventListener(type, resetIdleTimer, { passive: true });
 });
 
+function renderTeamFilter() {
+  const sel = document.getElementById('flt-team');
+  if (!sel) return;
+  const cur = sel.value || 'all';
+  const teams = sortedTeams(EMP);
+  sel.innerHTML = '<option value="all">전체 팀</option>' +
+    teams.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+  sel.value = teams.includes(cur) || cur === 'all' ? cur : 'all';
+}
+
 async function loadEmployees() {
   const data = await apiRequest('/api/employees');
   EMP = data.employees || [];
+  renderTeamFilter();
   refreshViews();
 }
 
@@ -369,12 +380,12 @@ async function submitChangePw() {
 // ═══════════════════════════════════════
 function filtered() {
   const s  = document.getElementById('srch')?.value || '';
-  const d  = document.getElementById('flt-team')?.value || 'all';
-  const g  = document.getElementById('flt-grade')?.value || 'all';
-  const gn = document.getElementById('flt-gender')?.value || 'all';
+  const team = document.getElementById('flt-team')?.value || 'all';
+  const g    = document.getElementById('flt-grade')?.value || 'all';
+  const gn   = document.getElementById('flt-gender')?.value || 'all';
   return EMP.filter(e => {
     if (s && !e.name.includes(s) && !e.empNo.includes(s) && !e.team.includes(s) && !e.pos.includes(s) && !String(e.birthYear).includes(s)) return false;
-    if (d  !== 'all' && e.team.replace(/팀$/, '') !== d.replace(/팀$/, ''))  return false;
+    if (team !== 'all' && e.team.replace(/팀$/, '') !== team.replace(/팀$/, ''))  return false;
     if (g  !== 'all' && e.grade  !== g)  return false;
     if (gn !== 'all' && e.gender !== gn) return false;
     return true;
@@ -478,10 +489,10 @@ const RETIRE_AGE = 55;
 const RETIRE_NEAR = 2;
 
 function renderStatLists() {
-  const threeYearsAgo = new Date(TODAY.getFullYear() - 3, TODAY.getMonth(), TODAY.getDate());
+  const threeYearsAgo = new Date(today().getFullYear() - 3, today().getMonth(), today().getDate());
 
   const retireList = EMP
-    .filter(e => TODAY.getFullYear() - Number(e.birthYear) >= RETIRE_AGE - RETIRE_NEAR)
+    .filter(e => today().getFullYear() - Number(e.birthYear) >= RETIRE_AGE - RETIRE_NEAR)
     .sort((a, b) => (a.birth || '').localeCompare(b.birth || ''));
 
   const newList = EMP
@@ -535,16 +546,14 @@ function renderStatLists() {
 //  HEADER / KPI
 // ═══════════════════════════════════════
 function renderHeader() {
-  const d = TODAY;
+  const d = today();
   const dateEl = document.getElementById('cur-date');
   if (dateEl) dateEl.textContent = `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
   const total = document.getElementById('kpi-total');
   if (total) total.textContent = EMP.length;
-  const depts = document.getElementById('kpi-depts');
-  if (depts) depts.textContent = [...new Set(EMP.map(e => e.team))].length + '개 팀';
 
   const n = EMP.length;
-  const avgY  = n ? EMP.reduce((s, e) => s + (TODAY - new Date(e.joinDate)), 0) / n / (365.25 * 24 * 3600 * 1000) : 0;
+  const avgY  = n ? EMP.reduce((s, e) => s + (today() - new Date(e.joinDate)), 0) / n / (365.25 * 24 * 3600 * 1000) : 0;
   const kpiAvg = document.getElementById('kpi-avg');
   if (kpiAvg) kpiAvg.innerHTML = `<span style="font-size:22px;font-weight:700;color:#F46600">${avgY.toFixed(1)}</span><span style="font-size:13px;color:#8080AA">년</span>`;
 
@@ -555,7 +564,7 @@ function renderHeader() {
   const femalePct = document.getElementById('kpi-female-pct');
   if (femalePct) femalePct.textContent = pct(n - male) + '%';
   const retire = document.getElementById('kpi-retire');
-  if (retire) retire.textContent = EMP.filter(e => TODAY.getFullYear() - Number(e.birthYear) >= RETIRE_AGE - RETIRE_NEAR).length + '명';
+  if (retire) retire.textContent = EMP.filter(e => today().getFullYear() - Number(e.birthYear) >= RETIRE_AGE - RETIRE_NEAR).length + '명';
 
   const stTotal = document.getElementById('st-total');
   if (stTotal) stTotal.textContent = n;
@@ -711,10 +720,16 @@ function selOpt(options, val) {
   return options.map(o => `<option value="${esc(o)}"${o === val ? ' selected' : ''}>${esc(o)}</option>`).join('');
 }
 
+function mostCommon(arr) {
+  const freq = {};
+  for (const v of arr) if (v) freq[v] = (freq[v] || 0) + 1;
+  return Object.keys(freq).sort((a, b) => freq[b] - freq[a])[0] || '';
+}
+
 function emptyEmployee() {
   return {
     no: EMP.reduce((m, e) => Math.max(m, e.no || 0), 0) + 1,
-    dept: '여신IT개발부',
+    dept: mostCommon(EMP.map(e => e.dept)),
     team: '',
     name: '',
     empNo: '',
@@ -877,7 +892,7 @@ function validateEmployee(emp, originalEmpNo = '') {
   if (!emp.dept) return '부서를 입력해 주세요.';
   if (!emp.team) return '팀을 입력해 주세요.';
   if (!isValidDate(emp.joinDate)) return '입행일은 실제 존재하는 YYYY-MM-DD 날짜로 입력해 주세요.';
-  if (!emp.birthYear || emp.birthYear < 1900 || emp.birthYear > TODAY.getFullYear()) return '출생년도를 올바르게 입력해 주세요.';
+  if (!emp.birthYear || emp.birthYear < 1900 || emp.birthYear > today().getFullYear()) return '출생년도를 올바르게 입력해 주세요.';
   if (!isValidDate(emp.birth)) return '생년월일은 실제 존재하는 YYYY-MM-DD 날짜로 입력해 주세요.';
   if (emp.gradeLevel < 1) return '등급은 1 이상으로 입력해 주세요.';
   for (const key of ['gradeUpDate', 'gradeSetDate', 'gradeNextDate']) {
@@ -1116,8 +1131,8 @@ function renderEvalPeriodSelect() {
 
 // 오늘 날짜에 해당하는 연도/반기 헤더를 강조 (1~6월=상반기, 7~12월=하반기)
 function markTodayPeriodHeader() {
-  const y = String(TODAY.getFullYear());
-  const key = `${y}-H${TODAY.getMonth() < 6 ? 1 : 2}`;
+  const y = String(today().getFullYear());
+  const key = `${y}-H${today().getMonth() < 6 ? 1 : 2}`;
   document.querySelectorAll('#eval-table th[data-yr]').forEach(th =>
     th.classList.toggle('cur-period-hd', th.dataset.yr === y));
   document.querySelectorAll('#eval-table th[data-period]').forEach(th =>
@@ -1214,6 +1229,10 @@ function evalAllocate(total, ratios) {
 }
 
 async function saveEvalRatios() {
+  if (EVAL.confirmed[activePeriodKey()]) {
+    alert('확정된 기간의 목표 비율은 변경할 수 없습니다.');
+    return;
+  }
   let sum = 0;
   const next = {};
   for (const g of EVAL_RATIO_GROUPS) {
@@ -1266,7 +1285,7 @@ function evalFiltered() {
 
 // 평가기간 비교: 기준(오늘) 반기 이하만 입력 허용, 이후(미래) 반기는 잠금
 function periodValue(key) { const [y, h] = key.split('-H'); return Number(y) * 2 + Number(h); }
-function todayPeriodValue() { return TODAY.getFullYear() * 2 + (TODAY.getMonth() < 6 ? 1 : 2); }
+function todayPeriodValue() { return today().getFullYear() * 2 + (today().getMonth() < 6 ? 1 : 2); }
 function isLockedFuture(period) { return periodValue(period) > todayPeriodValue(); }
 function periodLabel(period) { return EVAL_PERIODS.find(p => p.key === period)?.label || period; }
 
@@ -1278,7 +1297,7 @@ function evalSelClass(val, period) {
 
 function evalCell(empNo, period) {
   const cur = EVAL.data[empNo]?.[period] || '';
-  const locked = !!EVAL.confirmed[period];
+  const locked = !!EVAL.confirmed[period] || !!EVAL.excluded[empNo];
   const opts = ['<option value="">-</option>']
     .concat(EVAL_GRADES.map(g => `<option value="${g.key}"${g.key === cur ? ' selected' : ''}>${g.key} ${g.label}</option>`))
     .join('');
@@ -1307,9 +1326,9 @@ function evalNumKey(el, ev) {
 }
 
 function setEvalMult(el) {
+  if (anyConfirmed()) { el.value = EVAL.mult[el.dataset.empno] ?? 0; showEvalToast('확정된 기간이 있어 배수횟수를 변경할 수 없습니다.'); return; }
   const empNo = el.dataset.empno;
   const digits = el.value.replace(/[^\d]/g, '');
-  // 마지막에 입력한 한 자리 숫자를 사용 (기본값 0 뒤에 입력해 '03'이 되어도 '3'으로 처리)
   const v = digits ? digits.slice(-1) : '0';
   if (el.value !== v) el.value = v;
   EVAL.mult[empNo] = Number(v);
@@ -1325,8 +1344,9 @@ function evalAwardCell(empNo) {
 }
 
 function setEvalAward(el) {
+  if (anyConfirmed()) { el.value = EVAL.awards[el.dataset.empno] ?? 0; showEvalToast('확정된 기간이 있어 표창갯수를 변경할 수 없습니다.'); return; }
   const empNo = el.dataset.empno;
-  const digits = el.value.replace(/[^\d]/g, '').slice(0, 2); // 0~99
+  const digits = el.value.replace(/[^\d]/g, '').slice(0, 2);
   const v = digits === '' ? '0' : String(Math.min(99, Number(digits)));
   if (el.value !== v) el.value = v;
   EVAL.awards[empNo] = Number(v);
@@ -1456,30 +1476,37 @@ function evalValidate(period) {
 function updateEvalConfirmBar() {
   const period = activePeriodKey();
   const confirmed = !!EVAL.confirmed[period];
-  const v = evalValidate(period);
+  const saved = EVAL.tab;
+  EVAL.tab = 'regular'; const vr = evalValidate(period);
+  EVAL.tab = 'spec';    const vs = evalValidate(period);
+  EVAL.tab = saved;
+  const bothMatch = vr.match && vs.match;
   const statusEl = document.getElementById('eval-confirm-status');
   const btn = document.getElementById('eval-confirm-btn');
   if (statusEl) {
     if (confirmed) {
       statusEl.innerHTML = `<span class="ecf-ok">✓ ${esc(activePeriodLabel())} 확정 완료</span>`;
-    } else if (!v.quotaOk) {
+    } else if (!vr.quotaOk || !vs.quotaOk) {
       statusEl.innerHTML = `<span class="ecf-warn">목표 비율 합계를 100%로 저장하세요</span>`;
-    } else if (v.match) {
+    } else if (bothMatch) {
       statusEl.innerHTML = `<span class="ecf-ok">목표 비율과 일치 — 확정 가능</span>`;
     } else {
-      const remain = v.eligible - v.assigned;
-      const detail = EVAL_RATIO_GROUPS.map(g => {
-        const c = v.counts[g.key], q = v.quota[g.key];
-        return `<span class="${c === q ? 'ecf-g-ok' : 'ecf-g-no'}">${g.key} ${c}/${q}</span>`;
-      }).join('');
-      statusEl.innerHTML = `<span class="ecf-warn">${remain > 0 ? `미입력 ${remain}명` : '비율 불일치'}</span><span class="ecf-detail">${detail}</span>`;
+      const tabSt = (v, lbl) => {
+        const remain = v.eligible - v.assigned;
+        const detail = EVAL_RATIO_GROUPS.map(g => {
+          const c = v.counts[g.key], q = v.quota[g.key];
+          return `<span class="${c === q ? 'ecf-g-ok' : 'ecf-g-no'}">${g.key} ${c}/${q}</span>`;
+        }).join('');
+        return `<span class="ecf-tab-lbl">${lbl}</span>${remain > 0 ? `<span class="ecf-warn">미입력 ${remain}명</span>` : `<span class="ecf-warn">불일치</span>`}<span class="ecf-detail">${detail}</span>`;
+      };
+      statusEl.innerHTML = tabSt(vr, '일반') + '<span class="ecf-sep">·</span>' + tabSt(vs, '전문');
     }
   }
   if (btn) {
     btn.textContent = confirmed ? '확정 취소' : '확정하기';
     btn.classList.toggle('confirmed', confirmed);
-    btn.classList.toggle('ready', !confirmed && v.match);
-    btn.disabled = false; // 항상 클릭 가능 — 불일치 시 클릭하면 오류 모달로 안내
+    btn.classList.toggle('ready', !confirmed && bothMatch);
+    btn.disabled = false;
   }
 }
 
@@ -1487,6 +1514,8 @@ function onEvalPeriodChange() {
   renderEvalTable();        // 활성 기간 강조 / 잠금 상태 갱신
   updateEvalConfirmBar();
 }
+
+function anyConfirmed() { return Object.keys(EVAL.confirmed).length > 0; }
 
 function ratiosUnsaved() {
   return EVAL_RATIO_GROUPS.some(g => {
@@ -1508,17 +1537,25 @@ function confirmEvalPeriod() {
     if (!confirm(`${label} 확정을 취소하시겠습니까?\n취소하면 해당 기간을 다시 수정할 수 있습니다.`)) return;
     delete EVAL.confirmed[period];
   } else {
-    const v = evalValidate(period);
+    const saved = EVAL.tab;
+    EVAL.tab = 'regular'; const vr = evalValidate(period);
+    EVAL.tab = 'spec';    const vs = evalValidate(period);
+    EVAL.tab = saved;
+    const bothMatch = vr.match && vs.match;
     const doConfirm = () => {
       EVAL.confirmed[period] = true;
       persistEvaluations()
         .then(() => { renderEvalTable(); updateEvalConfirmBar(); flashEvalSaved('확정 완료'); })
         .catch(e => { delete EVAL.confirmed[period]; alert(e.message); });
     };
-    if (v.match) {
+    if (bothMatch) {
       showEvalModal('목표 비율 일치', `${label} 등급 배분이 목표 비율과 일치합니다. 확정하시겠습니까?`, null, '확정하기', doConfirm);
     } else {
-      showEvalModal('목표 비율 불일치', `${label} 등급 배분이 목표 비율과 일치하지 않습니다. 그래도 확정하시겠습니까?`, evalConfirmErrors(v), '그래도 확정', doConfirm);
+      const errs = [
+        ...evalConfirmErrors(vr, '일반직원'),
+        ...evalConfirmErrors(vs, '전문직무직원'),
+      ];
+      showEvalModal('목표 비율 불일치', `${label} 등급 배분이 목표 비율과 일치하지 않습니다.`, errs, '그래도 확정', doConfirm);
     }
     return;
   }
@@ -1528,14 +1565,15 @@ function confirmEvalPeriod() {
 }
 
 // 확정 불가 사유 목록 생성 (목표 비율 미설정 / 미입력 / 등급별 인원 초과·부족)
-function evalConfirmErrors(v) {
-  if (!v.quotaOk) return ['목표 비율 합계가 100%가 아닙니다. 먼저 목표 비율을 100%로 설정·저장해 주세요.'];
+function evalConfirmErrors(v, tabLabel) {
+  const p = tabLabel ? `[${tabLabel}] ` : '';
+  if (!v.quotaOk) return [`${p}목표 비율 합계가 100%가 아닙니다. 먼저 목표 비율을 100%로 설정·저장해 주세요.`];
   const errs = [];
   const remain = v.eligible - v.assigned;
-  if (remain > 0) errs.push(`미입력 인원이 ${remain}명 있습니다. (입력 ${v.assigned}명 / 전체 ${v.eligible}명)`);
+  if (remain > 0) errs.push(`${p}미입력 인원이 ${remain}명 있습니다. (입력 ${v.assigned}명 / 전체 ${v.eligible}명)`);
   EVAL_RATIO_GROUPS.forEach(g => {
     const c = v.counts[g.key], q = v.quota[g.key];
-    if (c !== q) errs.push(`${g.key}(${g.label}) 등급: 입력 ${c}명 · 목표 ${q}명 — ${c > q ? `${c - q}명 초과` : `${q - c}명 부족`}`);
+    if (c !== q) errs.push(`${p}${g.key}(${g.label}) 등급: 입력 ${c}명 · 목표 ${q}명 — ${c > q ? `${c - q}명 초과` : `${q - c}명 부족`}`);
   });
   return errs;
 }
@@ -1654,6 +1692,7 @@ function switchEvalTab(el) {
 }
 
 function toggleEvalExclude(el) {
+  if (anyConfirmed()) { el.checked = !!EVAL.excluded[el.dataset.empno]; showEvalToast('확정된 기간이 있어 평가제외를 변경할 수 없습니다.'); return; }
   const empNo = el.dataset.empno;
   if (el.checked) EVAL.excluded[empNo] = true;
   else delete EVAL.excluded[empNo];
@@ -1995,7 +2034,7 @@ function initCharts() {
 
     const tb = { '5년 미만': 0, '5~10년': 0, '10~15년': 0, '15~20년': 0, '20년+': 0 };
     EMP.forEach(e => {
-      const y = (TODAY - new Date(e.joinDate)) / (365.25 * 24 * 3600 * 1000);
+      const y = (today() - new Date(e.joinDate)) / (365.25 * 24 * 3600 * 1000);
       if (y < 5)       tb['5년 미만']++;
       else if (y < 10) tb['5~10년']++;
       else if (y < 15) tb['10~15년']++;
@@ -2064,7 +2103,7 @@ function exportCSV() {
 }
 
 function downloadTemplate() {
-  const ex = [1,'여신IT개발부','여신심사팀','홍길동','1234567','팀원','L2','차장','2010-03-01',1980,'1980-05-20','남','2020-01-01',8,'2022-03-01','2025-03-01','서울대학교','컴퓨터공학','','',''];
+  const ex = [1,'여신IT개발부','여신심사팀','홍길동','1234567','팀원','L2','차장','통합41기','2010-03-01',1980,'1980-05-20','남','2020-01-01',8,'2022-03-01','2025-03-01','서울대학교','컴퓨터공학','','',''];
   triggerDownload([csvRow(CSV_HEADERS), csvRow(ex)].join('\n'), 'EIMS_직원데이터_템플릿.csv');
 }
 
@@ -2122,6 +2161,7 @@ function importCSV(input) {
         body: JSON.stringify({ employees: imported, replace }),
       });
       EMP = data.employees || [];
+      renderTeamFilter();
       refreshViews();
       activateScreen('emplist');
     } catch (e) {

@@ -7,7 +7,7 @@ const ROOT = __dirname;
 const DATA_FILE = path.join(ROOT, 'data', 'employees.json');
 const AUTH_FILE = path.join(ROOT, 'data', 'auth.json');
 const EVAL_FILE = path.join(ROOT, 'data', 'evaluations.json');
-const PORT = Number(process.env.PORT || 7000);
+const PORT = Number(process.env.PORT || 7070);
 const SESSION_TTL_MS = 30 * 60 * 1000;
 const MAX_AUTH_FAILS = 5;
 const AUTH_LOCK_MS = 30 * 1000;
@@ -212,6 +212,14 @@ function saveEmployees(employees) {
   fs.renameSync(tmp, DATA_FILE);
 }
 
+// ── 쓰기 직렬화 (동시 요청 경합 방지) ──
+const _locks = { emp: Promise.resolve(), eval: Promise.resolve() };
+function withLock(key, fn) {
+  const next = _locks[key].then(fn);
+  _locks[key] = next.catch(() => {});
+  return next;
+}
+
 // ── 인사평가(평가하기) 저장소 ──
 // { ratios: {S,A,G,CD}, evals: { [직원번호]: { [평가기간]: 등급 } }, mult: { [직원번호]: 배수횟수 }, confirmed: { [평가기간]: true }, excluded: { [직원번호]: true } }
 const EVAL_GRADE_KEYS = ['S', 'A', 'G', 'C', 'D'];
@@ -387,11 +395,13 @@ const STATIC_TYPES = {
   '.css': 'text/css; charset=utf-8',
   '.js': 'application/javascript; charset=utf-8',
   '.ttf': 'font/ttf',
+  '.zip': 'application/zip',
 };
 
 // 공개 가능한 정적 자산만 명시적으로 허용 (서버 소스/데이터/.git 등은 일절 노출하지 않음)
 const PUBLIC_ROOT_FILES = new Set(['index.html', 'app.js', 'style.css']);
 const LIBS_DIR = path.join(ROOT, 'libs');
+const DOWNLOADS_DIR = path.join(ROOT, 'downloads');
 
 function serveStatic(req, res, pathname) {
   const rel = pathname === '/' ? 'index.html' : pathname.replace(/^\/+/, '');
@@ -400,10 +410,10 @@ function serveStatic(req, res, pathname) {
   // 허용 판정은 '정규화된 resolved 경로' 기준으로만 한다 (원본 문자열 기준 traversal 우회 차단)
   const isPublicRoot = [...PUBLIC_ROOT_FILES].some(f => resolved === path.join(ROOT, f));
   const inLibs = resolved.startsWith(LIBS_DIR + path.sep);
+  const inDownloads = resolved.startsWith(DOWNLOADS_DIR + path.sep);
   const allowedExt = Object.prototype.hasOwnProperty.call(STATIC_TYPES, path.extname(resolved));
-  // '..' 및 숨김(.git/.env 등) 세그먼트는 명시적으로도 차단 (이중 방어)
   const badSeg = rel.split(/[\\/]/).some(seg => seg === '..' || seg.startsWith('.'));
-  if (badSeg || !allowedExt || !(isPublicRoot || inLibs)) return send(res, 404, 'Not found');
+  if (badSeg || !allowedExt || !(isPublicRoot || inLibs || inDownloads)) return send(res, 404, 'Not found');
 
   fs.readFile(resolved, (err, data) => {
     if (err) return send(res, 404, 'Not found'); // 디렉터리는 EISDIR로 걸러짐
@@ -466,10 +476,22 @@ async function handleApi(req, res, pathname) {
 
   // 비밀번호 변경: 현재 비밀번호 확인 → 새 비밀번호 규칙 검증 → 저장
   if (pathname === '/api/password' && req.method === 'POST') {
+    const key = getClientKey(req);
+    const state = authFailures.get(key) || { count: 0, lockUntil: 0 };
+    const now = Date.now();
+    if (state.lockUntil > now) {
+      return send(res, 429, { error: `잠시 후 다시 시도해 주세요. (${Math.ceil((state.lockUntil - now) / 1000)}초)` });
+    }
     const body = await readJson(req);
     const current = String(body.current || '');
     const next = String(body.next || '');
-    if (!verifyPassword(current)) return send(res, 401, { error: '현재 비밀번호가 일치하지 않습니다.' });
+    if (!verifyPassword(current)) {
+      state.count += 1;
+      if (state.count >= MAX_AUTH_FAILS) { state.count = 0; state.lockUntil = now + AUTH_LOCK_MS; }
+      authFailures.set(key, state);
+      return send(res, 401, { error: state.lockUntil > now ? '실패 횟수를 초과했습니다. 30초 후 다시 시도해 주세요.' : `현재 비밀번호가 일치하지 않습니다. (${state.count}/${MAX_AUTH_FAILS})` });
+    }
+    authFailures.delete(key);
     if (!PASSWORD_RULE.test(next)) return send(res, 400, { error: '새 비밀번호는 4자 이상이어야 합니다.' });
     if (next === current) return send(res, 400, { error: '새 비밀번호는 현재 비밀번호와 달라야 합니다.' });
     setPassword(next);
@@ -486,30 +508,33 @@ async function handleApi(req, res, pathname) {
   }
 
   if (pathname === '/api/evaluations' && req.method === 'PUT') {
-    const body = await readJson(req);
-    const data = normalizeEvaluations(body);
-    // 확정(잠금)된 기간은 서버에서도 보호: 여전히 확정 상태인 기간의 등급/의견은
-    // 저장본 값을 강제로 보존한다(클라이언트 상태 꼬임·수동 호출로 인한 변조 방지).
-    // 이번 요청에서 확정이 해제된 기간은 정상적으로 수정 허용.
-    const prev = loadEvaluations();
-    for (const p of Object.keys(prev.confirmed)) {
-      if (!data.confirmed[p]) continue; // 확정 해제 → 수정 가능
-      // 확정 기간은 저장본과 '정확히' 동일하게 강제: 들어온 값에서 해당 기간을 모두 제거 후 저장본 값으로 복원
-      // (기존 값 보존 + 없던 직원에 대한 신규 추가/변조까지 차단)
-      for (const rec of Object.values(data.evals)) delete rec[p];
-      for (const rec of Object.values(data.comments)) delete rec[p];
-      for (const [empNo, rec] of Object.entries(prev.evals)) {
-        if (rec[p] !== undefined) (data.evals[empNo] ||= {})[p] = rec[p];
+    return withLock('eval', async () => {
+      const body = await readJson(req);
+      const data = normalizeEvaluations(body);
+      const prev = loadEvaluations();
+      const stillConfirmed = Object.keys(prev.confirmed).filter(p => data.confirmed[p]);
+      for (const p of stillConfirmed) {
+        for (const rec of Object.values(data.evals)) delete rec[p];
+        for (const rec of Object.values(data.comments)) delete rec[p];
+        for (const [empNo, rec] of Object.entries(prev.evals)) {
+          if (rec[p] !== undefined) (data.evals[empNo] ||= {})[p] = rec[p];
+        }
+        for (const [empNo, rec] of Object.entries(prev.comments)) {
+          if (rec[p] !== undefined) (data.comments[empNo] ||= {})[p] = rec[p];
+        }
       }
-      for (const [empNo, rec] of Object.entries(prev.comments)) {
-        if (rec[p] !== undefined) (data.comments[empNo] ||= {})[p] = rec[p];
+      for (const [empNo, rec] of Object.entries(data.evals)) if (!Object.keys(rec).length) delete data.evals[empNo];
+      for (const [empNo, rec] of Object.entries(data.comments)) if (!Object.keys(rec).length) delete data.comments[empNo];
+      if (stillConfirmed.length > 0) {
+        data.ratios = prev.ratios;
+        data.ratiosSpec = prev.ratiosSpec;
+        data.excluded = prev.excluded;
+        data.mult = prev.mult;
+        data.awards = prev.awards;
       }
-    }
-    // 위 delete로 비워진 레코드 정리
-    for (const [empNo, rec] of Object.entries(data.evals)) if (!Object.keys(rec).length) delete data.evals[empNo];
-    for (const [empNo, rec] of Object.entries(data.comments)) if (!Object.keys(rec).length) delete data.comments[empNo];
-    saveEvaluations(data);
-    return send(res, 200, { evaluations: data });
+      saveEvaluations(data);
+      return send(res, 200, { evaluations: data });
+    });
   }
 
   if (pathname === '/api/employees' && req.method === 'GET') {
@@ -517,55 +542,65 @@ async function handleApi(req, res, pathname) {
   }
 
   if (pathname === '/api/employees' && req.method === 'POST') {
-    const body = await readJson(req); // 본문을 먼저 읽어 load→save 사이 비동기 중단을 없앤다(동시 쓰기 경합 방지)
-    const employees = loadEmployees();
-    const nextNo = employees.reduce((m, e) => Math.max(m, Number(e.no) || 0), 0) + 1;
-    const emp = normalizeEmployee({ ...body, no: nextNo });
-    const err = validateEmployee(emp, employees);
-    if (err) return send(res, 400, { error: err });
-    employees.push(emp);
-    saveEmployees(employees);
-    return send(res, 201, { employee: emp });
+    return withLock('emp', async () => {
+      const body = await readJson(req);
+      const employees = loadEmployees();
+      const nextNo = employees.reduce((m, e) => Math.max(m, Number(e.no) || 0), 0) + 1;
+      const emp = normalizeEmployee({ ...body, no: nextNo });
+      const err = validateEmployee(emp, employees);
+      if (err) return send(res, 400, { error: err });
+      employees.push(emp);
+      saveEmployees(employees);
+      return send(res, 201, { employee: emp });
+    });
   }
 
   if (pathname === '/api/employees/import' && req.method === 'POST') {
-    const body = await readJson(req);
-    const current = loadEmployees();
-    const incoming = Array.isArray(body.employees) ? body.employees : [];
-    const baseNo = body.replace ? 0 : current.reduce((m, e) => Math.max(m, Number(e.no) || 0), 0);
-    const normalized = incoming.map((e, i) => normalizeEmployee({ ...e, no: baseNo + i + 1 }));
-    const validationBase = body.replace ? normalized : current.concat(normalized);
-    for (const emp of normalized) {
-      const err = validateEmployee(emp, validationBase.filter(e => e !== emp));
-      if (err) return send(res, 400, { error: err });
-    }
-    const next = body.replace ? normalized : current.concat(normalized);
-    saveEmployees(next);
-    return send(res, 200, { employees: next });
+    return withLock('emp', async () => {
+      const body = await readJson(req);
+      const current = loadEmployees();
+      const incoming = Array.isArray(body.employees) ? body.employees : [];
+      const baseNo = body.replace ? 0 : current.reduce((m, e) => Math.max(m, Number(e.no) || 0), 0);
+      const normalized = incoming.map((e, i) => normalizeEmployee({ ...e, no: baseNo + i + 1 }));
+      const validationBase = body.replace ? normalized : current.concat(normalized);
+      for (const emp of normalized) {
+        const err = validateEmployee(emp, validationBase.filter(e => e !== emp));
+        if (err) return send(res, 400, { error: err });
+      }
+      const next = body.replace ? normalized : current.concat(normalized);
+      saveEmployees(next);
+      return send(res, 200, { employees: next });
+    });
   }
 
   const match = pathname.match(/^\/api\/employees\/([^/]+)$/);
   if (match) {
     const empNo = decodeURIComponent(match[1]);
-    // PUT 본문은 load 이전에 읽어 read-modify-write를 동기적으로 유지(경합 방지)
-    const body = req.method === 'PUT' ? await readJson(req) : null;
-    const employees = loadEmployees();
-    const idx = employees.findIndex(e => e.empNo === empNo);
-    if (idx < 0) return send(res, 404, { error: '직원을 찾을 수 없습니다.' });
-    if (req.method === 'PUT') {
-      const emp = normalizeEmployee(body, employees[idx]);
-      const err = validateEmployee(emp, employees, empNo);
-      if (err) return send(res, 400, { error: err });
-      employees[idx] = emp;
-      saveEmployees(employees);
-      return send(res, 200, { employee: emp });
+    if (req.method === 'GET') {
+      const employees = loadEmployees();
+      const idx = employees.findIndex(e => e.empNo === empNo);
+      if (idx < 0) return send(res, 404, { error: '직원을 찾을 수 없습니다.' });
+      return send(res, 200, { employee: employees[idx] });
     }
-    if (req.method === 'DELETE') {
-      employees.splice(idx, 1);
-      saveEmployees(employees);
-      return send(res, 200, { ok: true });
-    }
-    if (req.method === 'GET') return send(res, 200, { employee: employees[idx] });
+    return withLock('emp', async () => {
+      const body = req.method === 'PUT' ? await readJson(req) : null;
+      const employees = loadEmployees();
+      const idx = employees.findIndex(e => e.empNo === empNo);
+      if (idx < 0) return send(res, 404, { error: '직원을 찾을 수 없습니다.' });
+      if (req.method === 'PUT') {
+        const emp = normalizeEmployee(body, employees[idx]);
+        const err = validateEmployee(emp, employees, empNo);
+        if (err) return send(res, 400, { error: err });
+        employees[idx] = emp;
+        saveEmployees(employees);
+        return send(res, 200, { employee: emp });
+      }
+      if (req.method === 'DELETE') {
+        employees.splice(idx, 1);
+        saveEmployees(employees);
+        return send(res, 200, { ok: true });
+      }
+    });
   }
 
   return send(res, 404, { error: 'API endpoint not found.' });
@@ -605,7 +640,7 @@ setInterval(() => {
     if (now - s.lastSeen > SESSION_TTL_MS) sessions.delete(token);
   }
   for (const [key, st] of authFailures) {
-    if (st.lockUntil <= now && st.count === 0) authFailures.delete(key);
+    if (st.lockUntil <= now) authFailures.delete(key);
   }
 }, 5 * 60 * 1000).unref();
 

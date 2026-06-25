@@ -1,7 +1,7 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 
-set "PORT=7000"
+set "PORT=7070"
 set "FOUND="
 
 echo Hostname:

@@ -112,12 +112,6 @@
         </div>
         <select class="flt-sel" id="flt-team" data-change="filter">
           <option value="all">전체 팀</option>
-          <option value="여신심사팀">여신심사팀</option>
-          <option value="여신업무팀">여신업무팀</option>
-          <option value="여신관리팀">여신관리팀</option>
-          <option value="상품/신용평가팀">상품/신용평가팀</option>
-          <option value="외환팀">외환팀</option>
-          <option value="PPR팀">PPR팀</option>
         </select>
         <select class="flt-sel" id="flt-grade" data-change="filter">
           <option value="all">전체 직급</option>
@@ -250,10 +244,16 @@
 
     <!-- ══ EVALUATION ══ -->
     <div id="screen-evaluate" class="screen">
-      <!-- 일반직원 / 전문직무직원 탭 -->
-      <div class="eval-tab-bar">
-        <button class="eval-tab-btn active" data-click="switchEvalTab" data-tab="regular">일반직원</button>
-        <button class="eval-tab-btn" data-click="switchEvalTab" data-tab="spec">전문직무직원</button>
+      <!-- 탭 + 확정 한 줄 -->
+      <div class="eval-top-row">
+        <div class="eval-tab-bar">
+          <button class="eval-tab-btn active" data-click="switchEvalTab" data-tab="regular">일반직원</button>
+          <button class="eval-tab-btn" data-click="switchEvalTab" data-tab="spec">전문직무직원</button>
+        </div>
+        <div class="eval-confirm-bar">
+          <div class="eval-confirm-status" id="eval-confirm-status"></div>
+          <button class="add-emp-btn eval-confirm-btn" id="eval-confirm-btn" data-click="confirmEvalPeriod">확정하기</button>
+        </div>
       </div>
       <!-- 등급별 목표 비율 설정 -->
       <div class="eval-ratio-card">
@@ -298,8 +298,6 @@
             내보내기
           </button>
         </div>
-        <div class="eval-confirm-status" id="eval-confirm-status"></div>
-        <button class="add-emp-btn eval-confirm-btn" id="eval-confirm-btn" data-click="confirmEvalPeriod">확정하기</button>
       </div>
       <div class="tbl-wrap full-tbl">
         <div class="tbl-scroll">

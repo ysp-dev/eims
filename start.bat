@@ -8,7 +8,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-set "PORT=7000"
+set "PORT=7070"
 set "NODE_EXE="
 set "FOUND="
 

@@ -236,7 +236,8 @@ select.edt-inp{appearance:none;-webkit-appearance:none;background-image:url("dat
 .eval-sel.locked-future{background:#F2F2F7;color:#AEAEB2;border-color:#E5E5EA;cursor:not-allowed}
 /* 하단 토스트 */
 #eval-table.tab-spec .eval-col-award,#eval-table.tab-spec .eval-col-mult,#eval-table.tab-spec .eval-col-cohort{display:none}
-.eval-tab-bar{display:flex;gap:6px;margin-bottom:12px}
+.eval-top-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.eval-tab-bar{display:flex;gap:6px}
 .eval-tab-btn{padding:5px 16px;border:1px solid #D1D1D6;border-radius:8px;background:#F2F2F7;color:#636366;font-size:13px;cursor:pointer;font-weight:500}
 .eval-tab-btn.active{background:#3B7DD8;border-color:#3B7DD8;color:#fff}
 .eval-excluded-row{opacity:.4}
@@ -259,14 +260,16 @@ select.edt-inp{appearance:none;-webkit-appearance:none;background-image:url("dat
 /* 평가대상 기간 선택 / 확정 */
 .eval-period-row{display:flex;align-items:center;gap:8px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #E5E5EA}
 .eval-period-row .eval-period-lbl{font-size:12px}
-#screen-evaluate .filter-bar .eval-confirm-status{margin-left:auto}
 .eval-period-lbl{font-size:11px;color:#2C2C2E;font-weight:600;white-space:nowrap}
-.eval-confirm-status{font-size:11px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;white-space:nowrap}
+.eval-confirm-bar{display:flex;align-items:center;gap:10px}
+.eval-confirm-status{font-size:11px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .ecf-ok{color:#2E8B57;font-weight:600}
 .ecf-warn{color:#B38600;font-weight:600}
-.ecf-detail{display:flex;gap:6px;color:#2C2C2E}
+.ecf-detail{display:flex;gap:5px;color:#2C2C2E}
 .ecf-g-ok{color:#2E8B57}
 .ecf-g-no{color:#C0282F}
+.ecf-tab-lbl{font-size:10px;color:#636366;font-weight:600;margin-right:2px}
+.ecf-sep{color:#D1D1D6;margin:0 6px}
 .eval-confirm-btn{background:rgba(100,100,120,.08);border-color:#D1D1D6;color:#636366}
 .eval-confirm-btn:hover{filter:brightness(.97)}
 .eval-confirm-btn.ready{background:rgba(46,139,87,.1);border-color:rgba(46,139,87,.4);color:#2E8B57}
