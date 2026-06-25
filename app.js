@@ -168,7 +168,14 @@ function activateScreen(screen) {
   if (screen === 'dashboard') { renderHeader(); renderDept(); }
   if (screen === 'emplist') { sortState = []; renderEmpList(); }
   if (screen === 'detail') renderDetail();
-  if (screen === 'stats')  { renderHeader(); renderStatLists(); ['age','tenure','join','gradeup','teamAvg','gradeTen','genderGrade','teamGradePct'].forEach(k => { charts[k]?.destroy?.(); delete charts[k]; }); }
+  if (screen === 'stats')  {
+    renderHeader(); renderStatLists();
+    // stats 차트는 매 진입 시 현재 데이터로 재생성. 캔버스 기준이라 차트를 추가해도 목록 동기화가 필요 없다.
+    document.querySelectorAll('#screen-stats canvas').forEach(cv => {
+      const k = Object.keys(charts).find(key => charts[key]?.canvas === cv);
+      if (k) { charts[k].destroy(); delete charts[k]; }
+    });
+  }
   if (screen === 'evaluate') renderEvaluate();
   if (screen === 'evalcmt') renderEvalComment();
   initCharts();
@@ -2210,7 +2217,8 @@ function initCharts() {
         type: 'bar',
         data: { labels: teamsA, datasets: GBASE.map(g => ({
           label: g, backgroundColor: dashGradeColor(g), borderWidth: 0, borderRadius: 2,
-          data: teamsA.map(t => { const es = EMP.filter(e => e.team === t); return es.length ? +(es.filter(e => baseGrade(e) === g).length / es.length * 100).toFixed(1) : 0; }),
+          // 분모는 L1~L4 기준직급 보유자(대우 포함)만 — 직급 없는 직원이 있어도 합 100% 유지
+          data: teamsA.map(t => { const es = EMP.filter(e => e.team === t && GBASE.includes(baseGrade(e))); return es.length ? +(es.filter(e => baseGrade(e) === g).length / es.length * 100).toFixed(1) : 0; }),
         })) },
         options: {
           indexAxis: 'y', responsive: true, maintainAspectRatio: false,
