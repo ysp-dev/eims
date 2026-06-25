@@ -168,7 +168,7 @@ function activateScreen(screen) {
   if (screen === 'dashboard') { renderHeader(); renderDept(); }
   if (screen === 'emplist') { sortState = []; renderEmpList(); }
   if (screen === 'detail') renderDetail();
-  if (screen === 'stats')  { renderHeader(); renderStatLists(); ['age','tenure','level','dd','join','gradeup'].forEach(k => { charts[k]?.destroy?.(); delete charts[k]; }); }
+  if (screen === 'stats')  { renderHeader(); renderStatLists(); ['age','tenure','join','gradeup','teamAvg','gradeTen','genderGrade','teamGradePct'].forEach(k => { charts[k]?.destroy?.(); delete charts[k]; }); }
   if (screen === 'evaluate') renderEvaluate();
   if (screen === 'evalcmt') renderEvalComment();
   initCharts();
@@ -559,10 +559,6 @@ function renderHeader() {
 
   const male = EMP.filter(e => e.gender === '남').length;
   const pct = part => n ? Math.round(part / n * 100) : 0;
-  const malePct = document.getElementById('kpi-male-pct');
-  if (malePct) malePct.textContent = pct(male) + '%';
-  const femalePct = document.getElementById('kpi-female-pct');
-  if (femalePct) femalePct.textContent = pct(n - male) + '%';
   const retire = document.getElementById('kpi-retire');
   if (retire) retire.textContent = EMP.filter(e => today().getFullYear() - Number(e.birthYear) >= RETIRE_AGE - RETIRE_NEAR).length + '명';
 
@@ -797,13 +793,6 @@ function openEdit() {
   renderEmployeeForm(emp, 'edit');
 }
 
-function openEditFromList(empNo, ev) {
-  ev?.stopPropagation?.();
-  S.selectedEmpNo = empNo;
-  navigate('detail');
-  openEdit();
-}
-
 function openAdd() {
   S.selectedEmpNo = null;
   navigate('detail');
@@ -1027,8 +1016,6 @@ function renderDept() {
 // ═══════════════════════════════════════
 //  평가하기 (EVALUATION)
 // ═══════════════════════════════════════
-function evalGrade(key) { return EVAL_GRADES.find(g => g.key === key); }
-
 // 현재 탭 기준 목표 비율 객체 반환
 function currentRatios() { return EVAL.tab === 'spec' ? EVAL.ratiosSpec : EVAL.ratios; }
 
@@ -1267,8 +1254,10 @@ function evalAllocate(total, ratios) {
 }
 
 async function saveEvalRatios() {
-  if (EVAL.confirmed[activePeriodKey()]) {
-    alert('확정된 기간의 목표 비율은 변경할 수 없습니다.');
+  // 목표 비율은 기간별이 아닌 전역 설정이라, 확정된 기간이 하나라도 있으면 서버가 이전 값으로 되돌린다(server.js).
+  // 다른 전역 설정 편집기(setEvalMult/setEvalAward/toggleEvalExclude)와 동일하게 anyConfirmed()로 막아 무음 되돌림을 방지.
+  if (anyConfirmed()) {
+    alert('확정된 기간이 있어 목표 비율을 변경할 수 없습니다.');
     return;
   }
   let sum = 0;
@@ -1310,12 +1299,10 @@ function renderEvalTeamFilter() {
 }
 
 function evalFiltered() {
-  const s = document.getElementById('eval-srch')?.value || '';
   const t = document.getElementById('eval-flt-team')?.value || 'all';
   const isSpec = EVAL.tab === 'spec';
   return EMP.filter(e => {
     if (isSpec ? e.pos !== '전문직무직원' : (e.pos === '부장' || e.pos === '전문직무직원')) return false;
-    if (s && !e.name.includes(s) && !e.empNo.includes(s) && !e.team.includes(s)) return false;
     if (t !== 'all' && e.team !== t) return false;
     return true;
   });
@@ -2017,40 +2004,6 @@ function initCharts() {
   }
 
   if (sc === 'stats') {
-    const teams = sortedTeams(EMP);
-    const el = document.getElementById('c-dept-detail');
-    if (el && !charts.dd) {
-      const grades = ['L1', 'L2', 'L3', 'L4'];
-      const colors = grades.map(dashGradeColor);
-      charts.dd = new C(el, {
-        type: 'bar',
-        data: {
-          labels: teams,
-          datasets: grades.map((g, i) => ({
-            label: g, backgroundColor: colors[i], borderWidth: 0, borderRadius: 2,
-            data: teams.map(t => EMP.filter(e => e.team === t && e.grade === g).length),
-          })),
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          plugins: {
-            legend: { labels: { color: '#51525C', font: { family: "'Noto Sans KR',sans-serif", size: 10 }, padding: 14, boxWidth: 12 } },
-            dl: { formatter: (v, chart, di, ji) => {
-              const total = chart.data.datasets.reduce((s, d) => s + (d.data[ji] || 0), 0);
-              return total ? `${v} (${Math.round(v/total*100)}%)` : `${v}`;
-            }},
-          },
-          scales: {
-            x: { stacked: true, grid: { display: false }, ticks: TK, border: { color: 'transparent' } },
-            y: { stacked: true, ...BS.y },
-          },
-        },
-        plugins: [DL],
-      });
-    }
-  }
-
-  if (sc === 'stats') {
     const ab = { '30대': 0, '40대': 0, '50대': 0, '60대+': 0 };
     EMP.forEach(e => {
       const a = calcAge(e.birthYear);
@@ -2085,21 +2038,6 @@ function initCharts() {
       charts.tenure = new C(e6, {
         type: 'bar',
         data: { labels: Object.keys(tb), datasets: [{ data: Object.values(tb), backgroundColor: ['#3B7DD8', '#2E8B57', '#FFBC00', '#F46600', '#E63946'], borderWidth: 0, borderRadius: 4 }] },
-        options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 18 } }, plugins: { legend: { display: false }, dl: { formatter: pctFmt } }, scales: BS },
-        plugins: [DL],
-      });
-    }
-
-    const lv = {};
-    EMP.forEach(e => { const l = '' + e.gradeLevel; lv[l] = (lv[l] || 0) + 1; });
-    const lk = Object.keys(lv).sort((a, b) => parseInt(b) - parseInt(a));
-    const e7 = document.getElementById('c-level');
-    if (e7 && !charts.level) {
-      const lc = ['#0066FF', '#E63946', '#FF9F00', '#8E8F9A', '#7C4DFF'];
-      const pctFmt = (v) => { const n = EMP.length; return n ? `${v}명 (${Math.round(v/n*100)}%)` : `${v}명`; };
-      charts.level = new C(e7, {
-        type: 'bar',
-        data: { labels: lk, datasets: [{ data: lk.map(l => lv[l]), backgroundColor: lk.map((_, i) => lc[i % lc.length]), borderWidth: 0, borderRadius: 4 }] },
         options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 18 } }, plugins: { legend: { display: false }, dl: { formatter: pctFmt } }, scales: BS },
         plugins: [DL],
       });
@@ -2192,6 +2130,97 @@ function initCharts() {
           },
         },
         plugins: [DL, gradeupTopLabel],
+      });
+    }
+
+    // ── 추가 시각화 차트 ──────────────────────────
+    const GBASE = ['L1', 'L2', 'L3', 'L4'];
+    const baseGrade = e => e.grade ? e.grade.replace(/대우$/, '') : '';
+    const tenureYears = e => (today() - new Date(e.joinDate)) / (365.25 * 24 * 3600 * 1000);
+    const mean = arr => arr.length ? +(arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1) : 0;
+    const legendLbl = { color: '#51525C', font: { family: "'Noto Sans KR',sans-serif", size: 10 }, padding: 14, boxWidth: 12 };
+
+    // 1) 팀별 평균 연령·근속연수 (가로 막대, 이중 x축)
+    const teamsA = sortedTeams(EMP);
+    const e10 = document.getElementById('c-team-avg');
+    if (e10 && !charts.teamAvg) {
+      const avgAge = teamsA.map(t => mean(EMP.filter(e => e.team === t).map(e => calcAge(e.birthYear, e.birth)).filter(a => typeof a === 'number')));
+      const avgTen = teamsA.map(t => mean(EMP.filter(e => e.team === t).map(tenureYears).filter(Number.isFinite)));
+      charts.teamAvg = new C(e10, {
+        type: 'bar',
+        data: { labels: teamsA, datasets: [
+          { label: '평균 연령(세)', data: avgAge, backgroundColor: '#3B7DD8', borderWidth: 0, borderRadius: 4, xAxisID: 'x' },
+          { label: '평균 근속(년)', data: avgTen, backgroundColor: '#FFBC00', borderWidth: 0, borderRadius: 4, xAxisID: 'x2' },
+        ]},
+        options: {
+          indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 24 } },
+          plugins: { legend: { labels: legendLbl }, dl: { formatter: (v, chart, di) => di === 0 ? `${v}세` : `${v}년` } },
+          scales: {
+            x:  { position: 'bottom', grid: { color: 'rgba(0,0,0,.04)' }, ticks: TK, border: { color: 'transparent' } },
+            x2: { position: 'top', grid: { display: false }, ticks: TK, border: { color: 'transparent' } },
+            y:  { ...BS.y, grid: { display: false } },
+          },
+        },
+        plugins: [DL],
+      });
+    }
+
+    // 2) 직급별 평균 근속연수 (가로 막대)
+    const e11 = document.getElementById('c-grade-tenure');
+    if (e11 && !charts.gradeTen) {
+      const gTen = GBASE.map(g => mean(EMP.filter(e => baseGrade(e) === g).map(tenureYears).filter(Number.isFinite)));
+      charts.gradeTen = new C(e11, {
+        type: 'bar',
+        data: { labels: GBASE, datasets: [{ data: gTen, backgroundColor: GBASE.map(dashGradeColor), borderWidth: 0, borderRadius: 4 }] },
+        options: {
+          indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 30 } },
+          plugins: { legend: { display: false }, dl: { formatter: v => `${v}년` } },
+          scales: { x: BS.x, y: { ...BS.y, grid: { display: false } } },
+        },
+        plugins: [DL],
+      });
+    }
+
+    // 3) 성별 × 직급 분포 (누적 막대)
+    const e12 = document.getElementById('c-gender-grade');
+    if (e12 && !charts.genderGrade) {
+      const cnt = (g, sex) => EMP.filter(e => baseGrade(e) === g && e.gender === sex).length;
+      charts.genderGrade = new C(e12, {
+        type: 'bar',
+        data: { labels: GBASE, datasets: [
+          { label: '남성', data: GBASE.map(g => cnt(g, '남')), backgroundColor: '#5B9BD5', borderWidth: 0, borderRadius: 2 },
+          { label: '여성', data: GBASE.map(g => cnt(g, '여')), backgroundColor: '#E84D8A', borderWidth: 0, borderRadius: 2 },
+        ]},
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: legendLbl },
+            dl: { formatter: (v, chart, di, ji) => { const t = chart.data.datasets.reduce((s, d) => s + (d.data[ji] || 0), 0); return t ? `${v} (${Math.round(v/t*100)}%)` : `${v}`; } },
+          },
+          scales: { x: { stacked: true, grid: { display: false }, ticks: TK, border: { color: 'transparent' } }, y: { stacked: true, ...BS.y } },
+        },
+        plugins: [DL],
+      });
+    }
+
+    // 4) 팀별 직급 구성 비율 (100% 누적 가로 막대)
+    const e13 = document.getElementById('c-team-grade-pct');
+    if (e13 && !charts.teamGradePct) {
+      charts.teamGradePct = new C(e13, {
+        type: 'bar',
+        data: { labels: teamsA, datasets: GBASE.map(g => ({
+          label: g, backgroundColor: dashGradeColor(g), borderWidth: 0, borderRadius: 2,
+          data: teamsA.map(t => { const es = EMP.filter(e => e.team === t); return es.length ? +(es.filter(e => baseGrade(e) === g).length / es.length * 100).toFixed(1) : 0; }),
+        })) },
+        options: {
+          indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { labels: legendLbl }, dl: { formatter: v => `${Math.round(v)}%` } },
+          scales: {
+            x: { stacked: true, max: 100, grid: { display: false }, ticks: { ...TK, callback: v => v + '%' }, border: { color: 'transparent' } },
+            y: { stacked: true, ...BS.y, grid: { display: false } },
+          },
+        },
+        plugins: [DL],
       });
     }
   }
@@ -2311,7 +2340,6 @@ const ACTIONS = {
   exportCSV: () => exportCSV(),
   importCSV: el => importCSV(el),
   openDetail: el => openDetail(el.dataset.empno),
-  openEditFromList: (el, ev) => openEditFromList(el.dataset.empno, ev),
   deleteEmployee: (el, ev) => deleteEmployee(el.dataset.empno, ev),
   openEdit: () => openEdit(),
   cancelEdit: () => cancelEdit(),

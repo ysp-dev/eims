@@ -600,6 +600,7 @@ async function handleApi(req, res, pathname) {
         saveEmployees(employees);
         return send(res, 200, { ok: true });
       }
+      return send(res, 405, { error: 'Method Not Allowed.' });
     });
   }
 

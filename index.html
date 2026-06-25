@@ -233,15 +233,17 @@
           <div><div class="stats-lbl">여성 직원</div><div class="stats-val" style="color:#E84D8A"><span id="st-female"></span><span class="stats-unit" id="st-female-u"></span></div></div>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:13px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px">
+        <div class="ch-card"><div class="ch-title">팀별 직급 구성 비율</div><div class="ch-sub">팀별 직급 비중(100%) 편중 분석</div><div style="height:230px;position:relative"><canvas id="c-team-grade-pct"></canvas></div></div>
+        <div class="ch-card"><div class="ch-title">성별 × 직급 분포</div><div class="ch-sub">직급 내 남녀 구성 교차 분석</div><div style="height:230px;position:relative"><canvas id="c-gender-grade"></canvas></div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-top:13px">
         <div class="ch-card"><div class="ch-title">연령대 분포</div><div class="ch-sub">10년 단위 연령 구간</div><div style="height:200px;position:relative"><canvas id="c-age"></canvas></div></div>
         <div class="ch-card"><div class="ch-title">근속연수 분포</div><div class="ch-sub">구간별 근속 인원</div><div style="height:200px;position:relative"><canvas id="c-tenure"></canvas></div></div>
-        <div class="ch-card"><div class="ch-title">등급 현황</div><div class="ch-sub">등급별 인원 현황</div><div style="height:200px;position:relative"><canvas id="c-level"></canvas></div></div>
       </div>
-      <div class="ch-card" style="margin-top:13px">
-        <div class="ch-title">팀별 직급 구성 비교</div>
-        <div class="ch-sub">팀별 직급 분포 현황</div>
-        <div style="height:250px;position:relative"><canvas id="c-dept-detail"></canvas></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-top:13px">
+        <div class="ch-card"><div class="ch-title">팀별 평균 연령·근속연수</div><div class="ch-sub">팀별 인력 숙련도·연령대 비교</div><div style="height:230px;position:relative"><canvas id="c-team-avg"></canvas></div></div>
+        <div class="ch-card"><div class="ch-title">직급별 평균 근속연수</div><div class="ch-sub">직급별 승격 소요 기간 분석</div><div style="height:230px;position:relative"><canvas id="c-grade-tenure"></canvas></div></div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-top:13px">
         <div class="ch-card"><div class="ch-title">연도별 입행 현황</div><div class="ch-sub">연도별 신규 입행 인원 추이</div><div style="height:170px;position:relative"><canvas id="c-join"></canvas></div></div>
