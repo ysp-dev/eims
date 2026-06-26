@@ -1668,7 +1668,7 @@ function renderEvalComment() {
     const locked = EVAL.confirmed[p.key];
     return `<div class="eval-cmt-row">
       <div class="eval-cmt-head"><span>${esc(p.label)}</span>${g ? gtag(g) : ''}${locked ? '<span class="eval-cmt-lock">확정</span>' : ''}</div>
-      <textarea class="eval-cmt-area" data-period="${p.key}" rows="3" maxlength="4000" ${locked ? 'readonly' : ''} placeholder="종합평가의견 입력">${esc(recs[p.key] || '')}</textarea>
+      <textarea class="eval-cmt-area" data-period="${p.key}" rows="10" maxlength="4000" ${locked ? 'readonly' : ''} placeholder="종합평가의견 입력">${esc(recs[p.key] || '')}</textarea>
     </div>`;
   }).join('');
 }
@@ -2027,20 +2027,20 @@ function initCharts() {
   }
 
   if (sc === 'stats') {
-    const ab = { '30대': 0, '40대': 0, '50대': 0, '60대+': 0 };
+    const ab = { '20대': 0, '30대': 0, '40대': 0, '50대': 0 };
     EMP.forEach(e => {
       const a = calcAge(e.birthYear);
-      if (a < 40)      ab['30대']++;
+      if (a < 30)      ab['20대']++;
+      else if (a < 40) ab['30대']++;
       else if (a < 50) ab['40대']++;
       else if (a < 60) ab['50대']++;
-      else             ab['60대+']++;
     });
     const e5 = document.getElementById('c-age');
     if (e5 && !charts.age) {
       const pctFmt = (v) => { const n = EMP.length; return n ? `${v}명 (${Math.round(v/n*100)}%)` : `${v}명`; };
       charts.age = new C(e5, {
         type: 'bar',
-        data: { labels: Object.keys(ab), datasets: [{ data: Object.values(ab), backgroundColor: ['#3B7DD8', '#2E8B57', '#FFBC00', '#E63946'], borderWidth: 0, borderRadius: 4 }] },
+        data: { labels: Object.keys(ab), datasets: [{ data: Object.values(ab), backgroundColor: ['#8B5CF6', '#3B7DD8', '#2E8B57', '#FFBC00'], borderWidth: 0, borderRadius: 4 }] },
         options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 18 } }, plugins: { legend: { display: false }, dl: { formatter: pctFmt } }, scales: BS },
         plugins: [DL],
       });
