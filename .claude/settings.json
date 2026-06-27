@@ -4,7 +4,9 @@
       "Bash(perl -pi -e \"s/'Noto Sans KR'/'Pretendard'/g\" app.js style.css)",
       "Bash(perl -pi -e 's/\"Noto Sans KR\"/\"Pretendard\"/g' app.js)",
       "Bash(cd /Users/youngsoonpark/Documents/GitHub/eims *)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(grep -nE \"\\\\\\\\\\\\$\\\\{\\(e|emp\\)\\\\.\\(name|team|dept|pos|grade|title|empNo\\)\" app.js)",
+      "Bash(python3 -)"
     ],
     "additionalDirectories": [
       "/Users/youngsoonpark/Documents/GitHub/eims/libs/fonts"

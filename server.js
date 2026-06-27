@@ -155,13 +155,16 @@ function getClientKey(req) {
 
 // CSRF 방어: 상태 변경 요청(POST/PUT/DELETE)은 동일 출처에서만 허용
 function sameOrigin(req) {
+  const expectedHost = req.headers.host || '';
   const origin = req.headers.origin;
-  if (!origin) return true; // 동일출처 요청에서 Origin이 생략되는 경우 허용
   try {
-    return new URL(origin).host === (req.headers.host || '');
+    if (origin) return new URL(origin).host === expectedHost;
+    const referer = req.headers.referer;
+    if (referer) return new URL(referer).host === expectedHost;
   } catch (_) {
     return false;
   }
+  return false;
 }
 
 function verifyPassword(password) {

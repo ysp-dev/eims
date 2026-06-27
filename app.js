@@ -26,12 +26,17 @@ function esc(v) {
 
 function calcAge(by, birth) {
   const n = Number(by);
-  if (!n) return '-';
+  if (!n) return null;
   const age = today().getFullYear() - n;
   const m = birth && /^(\d{4})-(\d{2})-(\d{2})$/.exec(birth);
   if (!m) return age;
   const passed = (today().getMonth() + 1) * 100 + today().getDate() >= Number(m[2]) * 100 + Number(m[3]);
   return passed ? age : age - 1;
+}
+
+function formatAge(by, birth) {
+  const age = calcAge(by, birth);
+  return typeof age === 'number' ? `${age}세` : '-';
 }
 
 function calcYears(d) {
@@ -134,7 +139,7 @@ function refreshViews() {
   renderDept(); // 팀별 카드는 이제 대시보드에 표시됨
   if (S.screen === 'emplist') renderEmpList();
   if (S.screen === 'detail' && S.selectedEmpNo) renderDetail();
-  setTimeout(initCharts, 100);
+  requestAnimationFrame(initCharts);
 }
 
 // ═══════════════════════════════════════
@@ -538,7 +543,7 @@ function renderStatLists() {
           ${TD(e.name, 'color:#1C1C1E;font-weight:500')}
           ${TD(e.team)}${TD(e.pos)}${TD(e.title)}
           ${TD(e.birth || '-')}
-          ${TD(calcAge(e.birthYear, e.birth) + '세', 'color:#B38600;font-weight:600')}
+          ${TD(formatAge(e.birthYear, e.birth), 'color:#B38600;font-weight:600')}
         </tr>`).join('')}</tbody>
       </table>`;
     }
@@ -663,7 +668,7 @@ function renderHeader() {
           ${TD(e.team)}
           ${TD(e.pos)}
           ${TD(e.birth, 'color:#E84D8A;font-weight:500')}
-          ${TD(calcAge(e.birthYear, e.birth) + '세')}
+          ${TD(formatAge(e.birthYear, e.birth))}
         </tr>`).join('')}</tbody>
       </table>`;
     }
@@ -706,7 +711,7 @@ function renderEmpList() {
       <td style="color:#3A3A3C">${esc(e.joinDate)}</td>
       <td style="color:#3A3A3C;font-size:11px">${calcYears(e.joinDate)}</td>
       <td class="c" style="color:#3A3A3C">${esc(e.birthYear)}</td>
-      <td class="c" style="color:#3A3A3C">${calcAge(e.birthYear, e.birth)}세</td>
+      <td class="c" style="color:#3A3A3C">${formatAge(e.birthYear, e.birth)}</td>
       <td style="color:#3A3A3C">${esc(e.birth)}</td>
       <td class="c" style="color:${gc}">${esc(e.gender)}</td>
       <td style="color:#3A3A3C">${esc(e.gradeUpDate) || '-'}</td>
@@ -771,7 +776,7 @@ function renderDetail() {
     <div class="det-card">
       <div class="det-sec" style="color:#FFBC00">기본 정보</div>
       <div class="det-row"><span class="det-lbl">생년월일</span><span class="det-val">${esc(emp.birth)}</span></div>
-      <div class="det-row"><span class="det-lbl">나이(만)</span><span class="det-val">${calcAge(emp.birthYear, emp.birth)}세</span></div>
+      <div class="det-row"><span class="det-lbl">나이(만)</span><span class="det-val">${formatAge(emp.birthYear, emp.birth)}</span></div>
       <div class="det-row"><span class="det-lbl">성별</span><span style="font-size:12px;color:${gc};font-weight:500">${emp.gender === '남' ? '남성' : '여성'}</span></div>
       <div class="det-row"><span class="det-lbl">직위</span><span class="det-val">${esc(emp.pos)}</span></div>
       <div class="det-row"><span class="det-lbl">호칭</span><span class="det-val">${esc(emp.title)}</span></div>
@@ -1051,7 +1056,8 @@ function renderDept() {
   document.getElementById('dept-cards').innerHTML = teams.map(t => {
     const te     = EMP.filter(e => e.team === t);
     const male   = te.filter(e => e.gender === '남').length;
-    const avgAge = Math.round(te.reduce((s, e) => s + calcAge(e.birthYear), 0) / te.length);
+    const ages = te.map(e => calcAge(e.birthYear, e.birth)).filter(a => typeof a === 'number');
+    const avgAge = ages.length ? Math.round(ages.reduce((s, a) => s + a, 0) / ages.length) : '-';
     const l4 = te.filter(e => e.grade === 'L4').length;
     const l3 = te.filter(e => e.grade === 'L3').length;
     const l2 = te.filter(e => e.grade === 'L2').length;
