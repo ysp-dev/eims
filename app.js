@@ -1067,10 +1067,10 @@ function renderOrg() {
     rankPos(a.pos) - rankPos(b.pos) || gradeRank(b.grade) - gradeRank(a.grade) || a.name.localeCompare(b.name, 'ko'));
 
   const card = (e, cls = '') => `<div class="org-card ${cls}" data-click="openDetail" data-empno="${esc(e.empNo)}" title="상세보기">
-    ${av(e.name, 34)}
+    ${av(e.name, 30)}
     <div class="org-info">
-      <div class="org-name">${esc(e.name)}</div>
-      <div class="org-pos">${esc(e.title || e.pos)}${e.grade ? ` · ${esc(e.grade)}` : ''}</div>
+      <span class="org-name">${esc(e.name)}</span>
+      <span class="org-pos">${esc(e.title || e.pos)}${e.grade ? ` · ${esc(e.grade)}` : ''}</span>
     </div></div>`;
 
   const headHtml = head
