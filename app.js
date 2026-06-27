@@ -1077,12 +1077,13 @@ function renderOrg() {
     ? `<div class="org-head-wrap">${card(head, 'org-head')}<div class="org-dept">${esc(head.dept)}</div></div><div class="org-trunk"></div>`
     : '';
 
-  const cols = teams.map(t => {
+  const cols = teams.map((t, i) => {
+    const c = DASH_TEAM_COLORS[i % DASH_TEAM_COLORS.length]; // 팀별 색
     const members = orderMembers(EMP.filter(e => e.team === t && e !== head));
     const lead = members.find(e => e.pos === '팀장');
     const rest = members.filter(e => e.pos !== '팀장');
     return `<div class="org-col">
-      <div class="org-team-name">${esc(t)}<span class="org-team-cnt">${members.length}</span></div>
+      <div class="org-team-name" style="background:${c}14;border-color:${c}59">${esc(t)}<span class="org-team-cnt" style="color:${c}">${members.length}</span></div>
       ${lead ? card(lead, 'org-lead') : ''}
       <div class="org-members">${rest.map(e => card(e)).join('') || '<div class="org-empty">팀원 없음</div>'}</div>
     </div>`;

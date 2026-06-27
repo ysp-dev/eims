@@ -1841,7 +1841,7 @@ select.edt-inp {
   align-items: center;
   gap: 10px;
   background: var(--bg-card);
-  border: 1px solid var(--border-color);
+  border: none;
   border-radius: var(--radius-md);
   padding: 9px 12px;
   cursor: pointer;
@@ -1850,13 +1850,11 @@ select.edt-inp {
 }
 .org-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(255, 188, 0, 0.85);
   box-shadow: var(--shadow-md);
 }
 .org-info { min-width: 0; display: flex; align-items: baseline; gap: 6px; overflow: hidden; white-space: nowrap; }
 .org-name { font-size: 13px; font-weight: 700; color: var(--text-primary); flex-shrink: 0; }
 .org-pos { font-size: 11px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; }
-.org-head { border-color: var(--kb-yellow); box-shadow: var(--shadow-glow); min-width: 200px; }
-.org-lead { border-color: rgba(59, 125, 216, 0.45); background: rgba(59, 125, 216, 0.04); }
+.org-head { box-shadow: var(--shadow-glow); min-width: 200px; }
 .org-members { display: flex; flex-direction: column; gap: 7px; }
 .org-empty { font-size: 11px; color: var(--text-tertiary); text-align: center; padding: 10px 0; }
