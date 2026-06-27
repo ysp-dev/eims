@@ -7,6 +7,7 @@ const S = {
   formMode: 'edit',
   pendingScreen: 'dashboard',
   authenticated: false,
+  listPreset: null,
 };
 let EMP = [];
 const charts = {};
@@ -397,6 +398,8 @@ function filtered() {
   const g    = document.getElementById('flt-grade')?.value || 'all';
   const gn   = document.getElementById('flt-gender')?.value || 'all';
   return EMP.filter(e => {
+    if (S.listPreset === 'retire' && !isRetireNear(e)) return false;
+    if (S.listPreset?.type === 'ageBucket' && ageBucket(e) !== S.listPreset.value) return false;
     if (s && !e.name.includes(s) && !e.empNo.includes(s) && !e.team.includes(s) && !e.pos.includes(s) && !String(e.birthYear).includes(s)) return false;
     if (team !== 'all' && e.team.replace(/팀$/, '') !== team.replace(/팀$/, ''))  return false;
     if (g  !== 'all' && e.grade  !== g)  return false;
@@ -500,7 +503,11 @@ function sortEmpList(list) {
 // ═══════════════════════════════════════
 const RETIRE_AGE = 55;
 const RETIRE_NEAR = 2;
-const AGE_BUCKETS = ['20대', '30대', '40대', '50대', '60대+'];
+const AGE_BUCKETS = ['20대', '30대', '40대', '50대'];
+
+function isRetireNear(e) {
+  return today().getFullYear() - Number(e.birthYear) >= RETIRE_AGE - RETIRE_NEAR;
+}
 
 function ageBucket(e) {
   const a = calcAge(e.birthYear, e.birth);
@@ -509,14 +516,14 @@ function ageBucket(e) {
   if (a < 40) return '30대';
   if (a < 50) return '40대';
   if (a < 60) return '50대';
-  return '60대+';
+  return '';
 }
 
 function renderStatLists() {
   const threeYearsAgo = new Date(today().getFullYear() - 3, today().getMonth(), today().getDate());
 
   const retireList = EMP
-    .filter(e => today().getFullYear() - Number(e.birthYear) >= RETIRE_AGE - RETIRE_NEAR)
+    .filter(isRetireNear)
     .sort((a, b) => (a.birth || '').localeCompare(b.birth || ''));
 
   const newList = EMP
@@ -634,7 +641,7 @@ function renderHeader() {
   const male = EMP.filter(e => e.gender === '남').length;
   const pct = part => n ? Math.round(part / n * 100) : 0;
   const retire = document.getElementById('kpi-retire');
-  if (retire) retire.textContent = EMP.filter(e => today().getFullYear() - Number(e.birthYear) >= RETIRE_AGE - RETIRE_NEAR).length + '명';
+  if (retire) retire.textContent = EMP.filter(isRetireNear).length + '명';
 
   // ── 이번 달 생일자 KPI
   const thisMonth = today().getMonth() + 1; // 1~12
@@ -695,6 +702,11 @@ function renderEmpList() {
   const tbody = document.getElementById('emp-tbody');
   const cnt = document.getElementById('flt-count');
   if (cnt) cnt.textContent = list.length;
+  const preset = document.getElementById('flt-preset');
+  if (preset) {
+    preset.textContent = S.listPreset === 'retire' ? '임피 근접' : S.listPreset?.type === 'ageBucket' ? S.listPreset.value : '';
+    preset.classList.toggle('show', !!S.listPreset);
+  }
   if (!tbody) return;
   tbody.innerHTML = list.map((e, i) => {
     const gc = e.gender === '남' ? '#5B9BD5' : '#E84D8A';
@@ -727,6 +739,29 @@ function renderEmpList() {
     </tr>`;
   }).join('');
   updateSortIndicators();
+}
+
+function clearEmployeeListFilters() {
+  S.listPreset = null;
+  const srch = document.getElementById('srch');
+  const team = document.getElementById('flt-team');
+  const grade = document.getElementById('flt-grade');
+  const gender = document.getElementById('flt-gender');
+  if (srch) srch.value = '';
+  if (team) team.value = 'all';
+  if (grade) grade.value = 'all';
+  if (gender) gender.value = 'all';
+}
+
+function handleEmployeeFilterInput() {
+  S.listPreset = null;
+  renderEmpList();
+}
+
+function dashboardKpi(el) {
+  clearEmployeeListFilters();
+  if (el.dataset.filter === 'retire') S.listPreset = 'retire';
+  activateScreen('emplist');
 }
 
 function toggleEduCols() {
@@ -1058,10 +1093,9 @@ async function deleteEmployee(empNo, ev) {
 function renderOrg() {
   const host = document.getElementById('org-body');
   if (!host) return;
-  const head = EMP.find(e => e.pos === '부장'); // 부서장 = 최상위
+  const head = EMP.find(e => e.pos === '부장');
   const teams = sortedTeams(EMP);
   const gradeRank = g => ({ L4: 4, L3: 3, L2: 2, L1: 1 }[String(g).replace(/대우$/, '')] || 0);
-  // 팀 내 정렬: 팀장 → 팀원(직급 높은 순) → 전문직무직원
   const rankPos = p => (p === '팀장' ? 0 : p === '전문직무직원' ? 2 : 1);
   const orderMembers = list => list.slice().sort((a, b) =>
     rankPos(a.pos) - rankPos(b.pos) || gradeRank(b.grade) - gradeRank(a.grade) || a.name.localeCompare(b.name, 'ko'));
@@ -1078,7 +1112,7 @@ function renderOrg() {
     : '';
 
   const cols = teams.map((t, i) => {
-    const c = DASH_TEAM_COLORS[i % DASH_TEAM_COLORS.length]; // 팀별 색
+    const c = DASH_TEAM_COLORS[i % DASH_TEAM_COLORS.length];
     const members = orderMembers(EMP.filter(e => e.team === t && e !== head));
     const lead = members.find(e => e.pos === '팀장');
     const rest = members.filter(e => e.pos !== '팀장');
@@ -2473,9 +2507,13 @@ function importCSV(input) {
 //  EVENT DELEGATION (CSP: 인라인 핸들러 제거 → script-src 'self')
 // ═══════════════════════════════════════
 const ACTIONS = {
-  navigate: el => navigate(el.dataset.screen || el.dataset.arg),
+  navigate: el => {
+    if (el.dataset.screen === 'emplist') clearEmployeeListFilters();
+    navigate(el.dataset.screen || el.dataset.arg);
+  },
   toggleNavSec: el => el.closest('.nav-group')?.classList.toggle('collapsed'),
-  filter: () => renderEmpList(),
+  filter: () => handleEmployeeFilterInput(),
+  dashboardKpi: el => dashboardKpi(el),
   openAdd: () => openAdd(),
   toggleEduCols: () => toggleEduCols(),
   downloadTemplate: () => downloadTemplate(),

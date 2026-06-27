@@ -84,13 +84,13 @@
     <!-- ══ DASHBOARD ══ -->
     <div id="screen-dashboard" class="screen active">
       <div class="kpi-grid kpi-grid-4">
-        <div class="kpi-card">
+        <button class="kpi-card kpi-link" type="button" data-click="dashboardKpi" data-filter="all" title="전체 직원 목록 보기">
           <div class="kpi-ico" style="background:rgba(255,188,0,.1)">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFBC00" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           </div>
           <span class="kpi-lbl">전체 직원</span>
           <div class="kpi-val"><span id="kpi-total"></span><span class="kpi-unit">명</span></div>
-        </div>
+        </button>
         <div class="kpi-card">
           <div class="kpi-ico" style="background:rgba(244,102,0,.1)">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F46600" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -105,31 +105,43 @@
           <span class="kpi-lbl">이번 달 생일자</span>
           <div class="kpi-val"><span id="kpi-birthday"></span><span class="kpi-unit">명</span></div>
         </div>
-        <div class="kpi-card alert">
+        <button class="kpi-card kpi-link alert" type="button" data-click="dashboardKpi" data-filter="retire" title="임피 근접 직원 목록 보기">
           <div class="kpi-ico" style="background:rgba(244,102,0,.14)">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F46600" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
           </div>
           <span class="kpi-lbl">임피 근접 (연도기준 53세+)</span>
           <div class="kpi-val" style="color:#F46600" id="kpi-retire"></div>
+        </button>
+      </div>
+
+      <div class="dashboard-section dashboard-team-section">
+        <div class="dashboard-section-head">
+          <div class="dashboard-section-title">팀 현황</div>
+          <div class="dashboard-section-sub">분포 차트와 팀별 상세 카드</div>
         </div>
+        <div class="ch-grid-2">
+          <div class="ch-card"><div class="ch-title">팀별 인원 현황</div><div class="ch-sub">팀 기준 직원 분포</div><div style="height:185px;position:relative"><canvas id="c-dept"></canvas></div></div>
+          <div class="ch-card"><div class="ch-title">직급별 분포</div><div class="ch-sub">직급 기준 인원 현황</div><div style="height:185px;position:relative"><canvas id="c-grade"></canvas></div></div>
+        </div>
+        <div class="dept-grid" id="dept-cards"></div>
       </div>
 
-      <div class="ch-grid-2">
-        <div class="ch-card"><div class="ch-title">팀별 인원 현황</div><div class="ch-sub">팀 기준 직원 분포</div><div style="height:185px;position:relative"><canvas id="c-dept"></canvas></div></div>
-        <div class="ch-card"><div class="ch-title">직급별 분포</div><div class="ch-sub">직급 기준 인원 현황</div><div style="height:185px;position:relative"><canvas id="c-grade"></canvas></div></div>
-      </div>
-      <div class="dept-grid" id="dept-cards"></div>
-
-      <div class="ch-grid-12" style="margin-bottom:16px">
-        <div class="ch-card"><div class="ch-title">성별 비율</div><div class="ch-sub">남성 / 여성 비율</div><div style="height:145px;position:relative"><canvas id="c-gender"></canvas></div></div>
-        <div class="ch-card" id="birthday-widget">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-            <div>
-              <div class="ch-title">🎂 이번 달 생일자</div>
-              <div class="ch-sub" id="birthday-sub"></div>
+      <div class="dashboard-section dashboard-alert-section">
+        <div class="dashboard-section-head">
+          <div class="dashboard-section-title">요약·알림</div>
+          <div class="dashboard-section-sub">성별 구성과 이번 달 이벤트</div>
+        </div>
+        <div class="ch-grid-12" style="margin-bottom:16px">
+          <div class="ch-card"><div class="ch-title">성별 비율</div><div class="ch-sub">남성 / 여성 비율</div><div style="height:145px;position:relative"><canvas id="c-gender"></canvas></div></div>
+          <div class="ch-card" id="birthday-widget">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+              <div>
+                <div class="ch-title">🎂 이번 달 생일자</div>
+                <div class="ch-sub" id="birthday-sub"></div>
+              </div>
             </div>
+            <div id="birthday-list" style="max-height:150px;overflow-y:auto"></div>
           </div>
-          <div id="birthday-list" style="max-height:150px;overflow-y:auto"></div>
         </div>
       </div>
     </div>
@@ -159,7 +171,7 @@
           <option value="남">남성</option>
           <option value="여">여성</option>
         </select>
-        <div class="flt-cnt">총 <span id="flt-count">0</span>명</div>
+        <div class="flt-cnt">총 <span id="flt-count">0</span>명 <span class="flt-preset" id="flt-preset"></span></div>
         <button class="add-emp-btn" data-click="openAdd" title="직원 추가">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
           직원 추가
