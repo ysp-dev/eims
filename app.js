@@ -2474,6 +2474,7 @@ function importCSV(input) {
 // ═══════════════════════════════════════
 const ACTIONS = {
   navigate: el => navigate(el.dataset.screen || el.dataset.arg),
+  toggleNavSec: el => el.closest('.nav-group')?.classList.toggle('collapsed'),
   filter: () => renderEmpList(),
   openAdd: () => openAdd(),
   toggleEduCols: () => toggleEduCols(),

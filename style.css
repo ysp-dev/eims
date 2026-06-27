@@ -127,13 +127,27 @@ select option { background: var(--bg-card); color: var(--text-primary); }
   padding: 12px 10px;
 }
 .nav-sec {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 16px 10px 6px;
   font-size: 10px;
   color: var(--text-tertiary);
   font-weight: 700;
   letter-spacing: 1.5px;
   text-transform: uppercase;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: 'Pretendard', sans-serif;
+  text-align: left;
+  outline: none;
 }
+.nav-sec:hover { color: var(--text-secondary); }
+.nav-chev { transition: transform 0.2s ease; flex-shrink: 0; }
+.nav-group.collapsed .nav-chev { transform: rotate(-90deg); }
+.nav-group.collapsed .nav-items { display: none; }
 .nav-btn {
   width: 100%;
   padding: 10px 14px;
