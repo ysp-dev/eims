@@ -213,52 +213,76 @@
 
     <!-- ══ STATISTICS ══ -->
     <div id="screen-stats" class="screen">
-      <div class="stats-grid3">
-        <div class="stats-card">
-          <div class="stats-ico" style="background:rgba(255,188,0,.1)">
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#FFBC00" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <div class="stats-section stats-section-overall">
+        <div class="stats-section-head">
+          <div>
+            <div class="stats-section-kicker">Department</div>
+            <div class="stats-section-title">부서 전체</div>
           </div>
-          <div><div class="stats-lbl">전체 직원</div><div class="stats-val"><span id="st-total"></span><span class="stats-unit">명</span></div></div>
+          <div class="stats-section-sub">전체 인력 구조와 주요 흐름</div>
         </div>
-        <div class="stats-card">
-          <div class="stats-ico" style="background:rgba(91,155,213,.1)">
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#5B9BD5" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
+        <div class="stats-grid3">
+          <div class="stats-card">
+            <div class="stats-ico" style="background:rgba(255,188,0,.1)">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#FFBC00" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <div><div class="stats-lbl">전체 직원</div><div class="stats-val"><span id="st-total"></span><span class="stats-unit">명</span></div></div>
           </div>
-          <div><div class="stats-lbl">남성 직원</div><div class="stats-val" style="color:#5B9BD5"><span id="st-male"></span><span class="stats-unit" id="st-male-u"></span></div></div>
-        </div>
-        <div class="stats-card">
-          <div class="stats-ico" style="background:rgba(232,77,138,.1)">
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#E84D8A" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
+          <div class="stats-card">
+            <div class="stats-ico" style="background:rgba(91,155,213,.1)">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#5B9BD5" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
+            </div>
+            <div><div class="stats-lbl">남성 직원</div><div class="stats-val" style="color:#5B9BD5"><span id="st-male"></span><span class="stats-unit" id="st-male-u"></span></div></div>
           </div>
-          <div><div class="stats-lbl">여성 직원</div><div class="stats-val" style="color:#E84D8A"><span id="st-female"></span><span class="stats-unit" id="st-female-u"></span></div></div>
+          <div class="stats-card">
+            <div class="stats-ico" style="background:rgba(232,77,138,.1)">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#E84D8A" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
+            </div>
+            <div><div class="stats-lbl">여성 직원</div><div class="stats-val" style="color:#E84D8A"><span id="st-female"></span><span class="stats-unit" id="st-female-u"></span></div></div>
+          </div>
+        </div>
+        <div class="stats-grid2">
+          <div class="ch-card"><div class="ch-title">성별 × 직급 분포</div><div class="ch-sub">직급 내 남녀 구성 교차 분석</div><div style="height:230px;position:relative"><canvas id="c-gender-grade"></canvas></div></div>
+          <div class="ch-card"><div class="ch-title">연령대 분포</div><div class="ch-sub">10년 단위 연령 구간</div><div style="height:200px;position:relative"><canvas id="c-age"></canvas></div></div>
+        </div>
+        <div class="stats-grid2">
+          <div class="ch-card"><div class="ch-title">근속연수 분포</div><div class="ch-sub">구간별 근속 인원</div><div style="height:200px;position:relative"><canvas id="c-tenure"></canvas></div></div>
+          <div class="ch-card"><div class="ch-title">직급별 평균 근속연수</div><div class="ch-sub">직급별 승격 소요 기간 분석</div><div style="height:230px;position:relative"><canvas id="c-grade-tenure"></canvas></div></div>
+        </div>
+        <div class="stats-grid2">
+          <div class="ch-card"><div class="ch-title">연도별 입행 현황</div><div class="ch-sub">연도별 신규 입행 인원 추이</div><div style="height:170px;position:relative"><canvas id="c-join"></canvas></div></div>
+          <div class="ch-card"><div class="ch-title">직급승격 연도별 현황</div><div class="ch-sub">현직급 승격일(gradeUpDate) 기준 연도별 인원</div><div style="height:170px;position:relative"><canvas id="c-gradeup"></canvas></div></div>
+        </div>
+        <div class="stats-grid2">
+          <div class="ch-card">
+            <div class="ch-title">임피근접 직원</div>
+            <div class="ch-sub" id="st-retire-sub"></div>
+            <div id="st-retire-list"></div>
+          </div>
+          <div class="ch-card">
+            <div class="ch-title">최근 입행 직원</div>
+            <div class="ch-sub" id="st-new-sub"></div>
+            <div id="st-new-list"></div>
+          </div>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px">
-        <div class="ch-card"><div class="ch-title">팀별 직급 구성 비율</div><div class="ch-sub">팀별 직급 비중(100%) 편중 분석</div><div style="height:230px;position:relative"><canvas id="c-team-grade-pct"></canvas></div></div>
-        <div class="ch-card"><div class="ch-title">성별 × 직급 분포</div><div class="ch-sub">직급 내 남녀 구성 교차 분석</div><div style="height:230px;position:relative"><canvas id="c-gender-grade"></canvas></div></div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-top:13px">
-        <div class="ch-card"><div class="ch-title">연령대 분포</div><div class="ch-sub">10년 단위 연령 구간</div><div style="height:200px;position:relative"><canvas id="c-age"></canvas></div></div>
-        <div class="ch-card"><div class="ch-title">근속연수 분포</div><div class="ch-sub">구간별 근속 인원</div><div style="height:200px;position:relative"><canvas id="c-tenure"></canvas></div></div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-top:13px">
-        <div class="ch-card"><div class="ch-title">팀별 평균 연령·근속연수</div><div class="ch-sub">팀별 인력 숙련도·연령대 비교</div><div style="height:230px;position:relative"><canvas id="c-team-avg"></canvas></div></div>
-        <div class="ch-card"><div class="ch-title">직급별 평균 근속연수</div><div class="ch-sub">직급별 승격 소요 기간 분석</div><div style="height:230px;position:relative"><canvas id="c-grade-tenure"></canvas></div></div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-top:13px">
-        <div class="ch-card"><div class="ch-title">연도별 입행 현황</div><div class="ch-sub">연도별 신규 입행 인원 추이</div><div style="height:170px;position:relative"><canvas id="c-join"></canvas></div></div>
-        <div class="ch-card"><div class="ch-title">직급승격 연도별 현황</div><div class="ch-sub">현직급 승격일(gradeUpDate) 기준 연도별 인원</div><div style="height:170px;position:relative"><canvas id="c-gradeup"></canvas></div></div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-top:13px">
-        <div class="ch-card">
-          <div class="ch-title">임피근접 직원</div>
-          <div class="ch-sub" id="st-retire-sub"></div>
-          <div id="st-retire-list"></div>
+
+      <div class="stats-section stats-section-team">
+        <div class="stats-section-head">
+          <div>
+            <div class="stats-section-kicker">Teams</div>
+            <div class="stats-section-title">팀별 분석</div>
+          </div>
+          <div class="stats-section-sub">팀 간 구성 차이와 편중 신호</div>
         </div>
-        <div class="ch-card">
-          <div class="ch-title">최근 입행 직원</div>
-          <div class="ch-sub" id="st-new-sub"></div>
-          <div id="st-new-list"></div>
+        <div class="stats-grid2">
+          <div class="ch-card"><div class="ch-title">팀별 직급 구성 비율</div><div class="ch-sub">팀별 직급 비중(100%) 편중 분석</div><div style="height:230px;position:relative"><canvas id="c-team-grade-pct"></canvas></div></div>
+          <div class="ch-card"><div class="ch-title">팀별 평균 연령·근속연수</div><div class="ch-sub">팀별 인력 숙련도·연령대 비교</div><div style="height:230px;position:relative"><canvas id="c-team-avg"></canvas></div></div>
+        </div>
+        <div class="ch-card stats-team-pyramid">
+          <div class="ch-title">팀별 인력 피라미드</div>
+          <div class="ch-sub">팀별 연령대·성별 구성 비교</div>
+          <div id="team-age-pyramids" class="pyramid-grid"></div>
         </div>
       </div>
     </div>

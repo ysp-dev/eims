@@ -494,6 +494,17 @@ function sortEmpList(list) {
 // ═══════════════════════════════════════
 const RETIRE_AGE = 55;
 const RETIRE_NEAR = 2;
+const AGE_BUCKETS = ['20대', '30대', '40대', '50대', '60대+'];
+
+function ageBucket(e) {
+  const a = calcAge(e.birthYear, e.birth);
+  if (typeof a !== 'number') return '';
+  if (a < 30) return '20대';
+  if (a < 40) return '30대';
+  if (a < 50) return '40대';
+  if (a < 60) return '50대';
+  return '60대+';
+}
 
 function renderStatLists() {
   const threeYearsAgo = new Date(today().getFullYear() - 3, today().getMonth(), today().getDate());
@@ -514,6 +525,7 @@ function renderStatLists() {
   const newSub    = document.getElementById('st-new-sub');
   if (retireSub) retireSub.textContent = `만 ${RETIRE_AGE - RETIRE_NEAR}세 이상 · ${retireList.length}명`;
   if (newSub)    newSub.textContent    = `최근 3년 이내 입행 · ${newList.length}명`;
+  renderTeamAgePyramids();
 
   const retireEl = document.getElementById('st-retire-list');
   if (retireEl) {
@@ -547,6 +559,55 @@ function renderStatLists() {
       </table>`;
     }
   }
+}
+
+function renderTeamAgePyramids() {
+  const wrap = document.getElementById('team-age-pyramids');
+  if (!wrap) return;
+  const teams = sortedTeams(EMP);
+  if (!teams.length) {
+    wrap.innerHTML = '<div class="pyramid-empty">표시할 직원 데이터가 없습니다.</div>';
+    return;
+  }
+
+  const buckets = [...AGE_BUCKETS].reverse();
+  wrap.innerHTML = teams.map(team => {
+    const members = EMP.filter(e => e.team === team && ageBucket(e));
+    const total = members.length;
+    const rows = buckets.map(bucket => {
+      const males = members.filter(e => ageBucket(e) === bucket && e.gender === '남').length;
+      const females = members.filter(e => ageBucket(e) === bucket && e.gender === '여').length;
+      const malePct = total ? males / total * 100 : 0;
+      const femalePct = total ? females / total * 100 : 0;
+      const maleWidth = Math.min(100, malePct * 2);
+      const femaleWidth = Math.min(100, femalePct * 2);
+      return `
+        <div class="pyramid-row">
+          <div class="pyramid-side male">
+            <span class="pyramid-bar" title="${esc(bucket)} 남성 ${males}명 (${malePct.toFixed(1)}%)" style="width:${maleWidth}%">${males || ''}</span>
+          </div>
+          <div class="pyramid-age">${esc(bucket)}</div>
+          <div class="pyramid-side female">
+            <span class="pyramid-bar" title="${esc(bucket)} 여성 ${females}명 (${femalePct.toFixed(1)}%)" style="width:${femaleWidth}%">${females || ''}</span>
+          </div>
+        </div>`;
+    }).join('');
+    const maleTotal = members.filter(e => e.gender === '남').length;
+    const femaleTotal = members.filter(e => e.gender === '여').length;
+    return `
+      <div class="pyramid-card">
+        <div class="pyramid-head">
+          <div class="pyramid-team">${esc(team)}</div>
+          <div class="pyramid-total">${total}명</div>
+        </div>
+        <div class="pyramid-axis"><span>남</span><span>여</span></div>
+        <div class="pyramid-body">${rows}</div>
+        <div class="pyramid-foot">
+          <span>남 ${maleTotal}</span>
+          <span>여 ${femaleTotal}</span>
+        </div>
+      </div>`;
+  }).join('');
 }
 
 // ═══════════════════════════════════════
@@ -2027,20 +2088,17 @@ function initCharts() {
   }
 
   if (sc === 'stats') {
-    const ab = { '20대': 0, '30대': 0, '40대': 0, '50대': 0 };
+    const ab = Object.fromEntries(AGE_BUCKETS.map(k => [k, 0]));
     EMP.forEach(e => {
-      const a = calcAge(e.birthYear);
-      if (a < 30)      ab['20대']++;
-      else if (a < 40) ab['30대']++;
-      else if (a < 50) ab['40대']++;
-      else if (a < 60) ab['50대']++;
+      const b = ageBucket(e);
+      if (b) ab[b]++;
     });
     const e5 = document.getElementById('c-age');
     if (e5 && !charts.age) {
       const pctFmt = (v) => { const n = EMP.length; return n ? `${v}명 (${Math.round(v/n*100)}%)` : `${v}명`; };
       charts.age = new C(e5, {
         type: 'bar',
-        data: { labels: Object.keys(ab), datasets: [{ data: Object.values(ab), backgroundColor: ['#8B5CF6', '#3B7DD8', '#2E8B57', '#FFBC00'], borderWidth: 0, borderRadius: 4 }] },
+        data: { labels: Object.keys(ab), datasets: [{ data: Object.values(ab), backgroundColor: ['#8B5CF6', '#3B7DD8', '#2E8B57', '#FFBC00', '#E63946'], borderWidth: 0, borderRadius: 4 }] },
         options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 18 } }, plugins: { legend: { display: false }, dl: { formatter: pctFmt } }, scales: BS },
         plugins: [DL],
       });
@@ -2258,6 +2316,7 @@ function initCharts() {
         plugins: [DL],
       });
     }
+
   }
 }
 
