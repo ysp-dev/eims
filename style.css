@@ -1771,3 +1771,92 @@ select.edt-inp {
 #screen-evaluate .ch-sub { color: var(--text-secondary); }
 #screen-evaluate .flt-cnt { color: var(--text-primary); }
 #eval-table th { color: var(--text-primary); }
+
+/* ── 조직도 (Org Chart) ── */
+.org-wrap { padding: 8px 4px 24px; }
+.org-head-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.org-dept { font-size: 11px; color: var(--text-tertiary); font-weight: 600; letter-spacing: .3px; }
+.org-trunk { width: 2px; height: 26px; background: var(--border-hover); margin: 4px auto 0; }
+.org-cols {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  overflow-x: auto;
+  padding: 22px 4px 4px;
+  position: relative;
+}
+.org-col {
+  flex: 1 1 0;
+  min-width: 188px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+}
+/* 각 컬럼 → 가로선 연결 세로 스텁 */
+.org-col::before {
+  content: '';
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  width: 2px;
+  height: 22px;
+  background: var(--border-hover);
+}
+/* 가로 연결선: 컬럼마다 그리고 gap(16px)을 양쪽 8px씩 넘겨 이어붙임 → 항상 컬럼 중심에 정렬 */
+.org-col::after {
+  content: '';
+  position: absolute;
+  top: -22px;
+  left: -8px;
+  right: -8px;
+  height: 2px;
+  background: var(--border-hover);
+}
+.org-col:first-child::after { left: 50%; }
+.org-col:last-child::after { right: 50%; }
+.org-team-name {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  background: var(--kb-yellow-light);
+  border: 1px solid rgba(255, 188, 0, 0.35);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+}
+.org-team-cnt {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--kb-yellow-dark);
+  background: #fff;
+  border-radius: 10px;
+  padding: 1px 7px;
+}
+.org-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 9px 12px;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition-base);
+}
+.org-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 188, 0, 0.85);
+  box-shadow: var(--shadow-md);
+}
+.org-info { min-width: 0; }
+.org-name { font-size: 13px; font-weight: 700; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.org-pos { font-size: 11px; color: var(--text-secondary); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.org-head { border-color: var(--kb-yellow); box-shadow: var(--shadow-glow); min-width: 200px; }
+.org-lead { border-color: rgba(59, 125, 216, 0.45); background: rgba(59, 125, 216, 0.04); }
+.org-members { display: flex; flex-direction: column; gap: 7px; }
+.org-empty { font-size: 11px; color: var(--text-tertiary); text-align: center; padding: 10px 0; }

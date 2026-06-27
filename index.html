@@ -30,6 +30,10 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       <span>직원 목록</span>
     </button>
+    <button class="nav-btn" data-screen="org" data-click="navigate">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="16" y="16" width="6" height="6" rx="1"/><path d="M12 8v4M5 16v-2h14v2M12 12v2"/></svg>
+      <span>조직도</span>
+    </button>
     <div class="nav-sec">평가 관리</div>
     <button class="nav-btn" data-screen="evaluate" data-click="navigate">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
@@ -209,6 +213,11 @@
       </button>
       <div class="det-hd" id="det-hd"></div>
       <div class="det-grid" id="det-grid"></div>
+    </div>
+
+    <!-- ══ ORG CHART ══ -->
+    <div id="screen-org" class="screen">
+      <div id="org-body" class="org-wrap"></div>
     </div>
 
     <!-- ══ STATISTICS ══ -->

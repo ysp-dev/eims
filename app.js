@@ -12,7 +12,7 @@ let EMP = [];
 const charts = {};
 function today() { return new Date(); }
 const EMP_PASSWORD_RULE = /^.{4,}$/; // 내부망용: 4자 이상이면 어떤 문자든 허용
-const PROTECTED_SCREENS = new Set(['dashboard', 'emplist', 'stats', 'detail', 'evaluate', 'evalcmt']);
+const PROTECTED_SCREENS = new Set(['dashboard', 'emplist', 'org', 'stats', 'detail', 'evaluate', 'evalcmt']);
 
 // ═══════════════════════════════════════
 //  HELPERS
@@ -167,11 +167,12 @@ function activateScreen(screen) {
   if (sc) sc.classList.add('active');
   const nb = document.querySelector(`[data-screen="${screen}"]`);
   if (nb) nb.classList.add('active');
-  const titles = { dashboard: '대시보드', emplist: '직원 목록', stats: '통계 분석', detail: '직원 상세', evaluate: '평가하기', evalcmt: '종합평가의견' };
+  const titles = { dashboard: '대시보드', emplist: '직원 목록', org: '조직도', stats: '통계 분석', detail: '직원 상세', evaluate: '평가하기', evalcmt: '종합평가의견' };
   const pt = document.getElementById('page-title');
   if (pt) pt.textContent = titles[screen] || screen;
   if (screen === 'dashboard') { renderHeader(); renderDept(); }
   if (screen === 'emplist') { sortState = []; renderEmpList(); }
+  if (screen === 'org') renderOrg();
   if (screen === 'detail') renderDetail();
   if (screen === 'stats')  {
     renderHeader(); renderStatLists();
@@ -1051,6 +1052,45 @@ async function deleteEmployee(empNo, ev) {
 // ═══════════════════════════════════════
 //  TEAM STATUS
 // ═══════════════════════════════════════
+// ═══════════════════════════════════════
+//  조직도 (ORG CHART)
+// ═══════════════════════════════════════
+function renderOrg() {
+  const host = document.getElementById('org-body');
+  if (!host) return;
+  const head = EMP.find(e => e.pos === '부장'); // 부서장 = 최상위
+  const teams = sortedTeams(EMP);
+  const gradeRank = g => ({ L4: 4, L3: 3, L2: 2, L1: 1 }[String(g).replace(/대우$/, '')] || 0);
+  // 팀 내 정렬: 팀장 → 팀원(직급 높은 순) → 전문직무직원
+  const rankPos = p => (p === '팀장' ? 0 : p === '전문직무직원' ? 2 : 1);
+  const orderMembers = list => list.slice().sort((a, b) =>
+    rankPos(a.pos) - rankPos(b.pos) || gradeRank(b.grade) - gradeRank(a.grade) || a.name.localeCompare(b.name, 'ko'));
+
+  const card = (e, cls = '') => `<div class="org-card ${cls}" data-click="openDetail" data-empno="${esc(e.empNo)}" title="상세보기">
+    ${av(e.name, 34)}
+    <div class="org-info">
+      <div class="org-name">${esc(e.name)}</div>
+      <div class="org-pos">${esc(e.title || e.pos)}${e.grade ? ` · ${esc(e.grade)}` : ''}</div>
+    </div></div>`;
+
+  const headHtml = head
+    ? `<div class="org-head-wrap">${card(head, 'org-head')}<div class="org-dept">${esc(head.dept)}</div></div><div class="org-trunk"></div>`
+    : '';
+
+  const cols = teams.map(t => {
+    const members = orderMembers(EMP.filter(e => e.team === t && e !== head));
+    const lead = members.find(e => e.pos === '팀장');
+    const rest = members.filter(e => e.pos !== '팀장');
+    return `<div class="org-col">
+      <div class="org-team-name">${esc(t)}<span class="org-team-cnt">${members.length}</span></div>
+      ${lead ? card(lead, 'org-lead') : ''}
+      <div class="org-members">${rest.map(e => card(e)).join('') || '<div class="org-empty">팀원 없음</div>'}</div>
+    </div>`;
+  }).join('');
+
+  host.innerHTML = headHtml + `<div class="org-cols">${cols}</div>`;
+}
+
 function renderDept() {
   const teams = sortedTeams(EMP);
   document.getElementById('dept-cards').innerHTML = teams.map(t => {
