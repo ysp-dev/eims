@@ -2916,9 +2916,9 @@ select.edt-inp {
   gap: 6px;
 }
 .org-dept {
-  font-size: 11px;
-  color: var(--text-tertiary);
-  font-weight: 600;
+  font-size: 16px;
+  color: var(--text-primary);
+  font-weight: 800;
   letter-spacing: .3px;
 }
 .org-trunk {
@@ -3037,4 +3037,112 @@ select.edt-inp {
   color: var(--text-tertiary);
   text-align: center;
   padding: 10px 0;
+}
+
+/* ── 조직도 인쇄 버튼 ── */
+.org-print-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 4px 10px;
+}
+.org-print-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Pretendard', sans-serif;
+  color: var(--text-primary);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition-base);
+}
+.org-print-btn:hover {
+  background: var(--kb-yellow-light);
+  border-color: var(--kb-yellow);
+}
+
+/* ── 조직도 A4 가로 인쇄 ── */
+@media print {
+  /* margin:0 으로 브라우저 헤더(URL·날짜·페이지번호) 제거 */
+  @page { size: A4 landscape; margin: 0; }
+
+  /* 배경색(선 포함) 강제 출력 */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* 회색 배경 제거 */
+  html, body, #app, #main, #content {
+    background: #ffffff !important;
+  }
+
+  /* 사이드바·버튼류 숨김 */
+  #sidebar,
+  .org-print-bar,
+  .tb-right,
+  .tb-div {
+    display: none !important;
+  }
+
+  /* 레이아웃 펼치기 */
+  #app {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 10mm 15mm !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+  }
+
+  #main {
+    display: block !important;
+    overflow: visible !important;
+  }
+
+  #top-bar {
+    border-bottom: none !important;
+    padding: 0 0 4mm !important;
+    background: none !important;
+    backdrop-filter: none !important;
+  }
+
+  #content {
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+
+  /* 조직도 화면만 표시 */
+  .screen { display: none !important; }
+  #screen-org { display: block !important; }
+
+  /* 스크롤 해제 */
+  .org-wrap,
+  .org-cols {
+    overflow: visible !important;
+  }
+
+  /* 아바타 숨김 */
+  .org-card > div:first-child:not(.org-info) {
+    display: none !important;
+  }
+
+  /* 카드 텍스트 중앙정렬 */
+  .org-card {
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+    break-inside: avoid;
+    justify-content: center !important;
+  }
+
+  .org-info {
+    justify-content: center !important;
+    width: 100%;
+  }
+
+  .org-col { break-inside: avoid; }
 }

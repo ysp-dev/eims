@@ -211,7 +211,7 @@ function closePasswordGate() {
     setTimeout(() => {
       if (!window.closed) {
         const err = document.getElementById('pw-error');
-        if (err) err.textContent = '창을 직접 닫아 주세요.';
+        if (err) err.textContent = '브라우저 보안 정책으로 자동 닫기가 불가합니다. Ctrl+W(Mac: ⌘W)로 닫아 주세요.';
       }
     }, 300);
     return;
@@ -1096,9 +1096,9 @@ function renderOrg() {
   const head = EMP.find(e => e.pos === '부장');
   const teams = sortedTeams(EMP);
   const gradeRank = g => ({ L4: 4, L3: 3, L2: 2, L1: 1 }[String(g).replace(/대우$/, '')] || 0);
-  const rankPos = p => (p === '팀장' ? 0 : p === '전문직무직원' ? 2 : 1);
+  const rankTitle = e => { const t = e.title || e.pos; return t === '팀장' ? 0 : t === '전문직무직원' ? 2 : 1; };
   const orderMembers = list => list.slice().sort((a, b) =>
-    rankPos(a.pos) - rankPos(b.pos) || gradeRank(b.grade) - gradeRank(a.grade) || a.name.localeCompare(b.name, 'ko'));
+    rankTitle(a) - rankTitle(b) || gradeRank(b.grade) - gradeRank(a.grade) || a.name.localeCompare(b.name, 'ko'));
 
   const card = (e, cls = '') => `<div class="org-card ${cls}" data-click="openDetail" data-empno="${esc(e.empNo)}" title="상세보기">
     ${av(e.name, 30)}
@@ -1108,14 +1108,14 @@ function renderOrg() {
     </div></div>`;
 
   const headHtml = head
-    ? `<div class="org-head-wrap">${card(head, 'org-head')}<div class="org-dept">${esc(head.dept)}</div></div><div class="org-trunk"></div>`
+    ? `<div class="org-head-wrap"><div class="org-dept">${esc(head.dept)}</div>${card(head, 'org-head')}</div><div class="org-trunk"></div>`
     : '';
 
   const cols = teams.map((t, i) => {
     const c = DASH_TEAM_COLORS[i % DASH_TEAM_COLORS.length];
     const members = orderMembers(EMP.filter(e => e.team === t && e !== head));
-    const lead = members.find(e => e.pos === '팀장');
-    const rest = members.filter(e => e.pos !== '팀장');
+    const lead = members.find(e => (e.title || e.pos) === '팀장');
+    const rest = members.filter(e => (e.title || e.pos) !== '팀장');
     return `<div class="org-col">
       <div class="org-team-name" style="background:${c}14;border-color:${c}59">${esc(t)}<span class="org-team-cnt" style="color:${c}">${members.length}</span></div>
       ${lead ? card(lead, 'org-lead') : ''}
@@ -1471,7 +1471,7 @@ function evalSelClass(val, period) {
 
 function evalCell(empNo, period) {
   const cur = EVAL.data[empNo]?.[period] || '';
-  const locked = !!EVAL.confirmed[period] || !!EVAL.excluded[empNo];
+  const locked = anyConfirmed() || !!EVAL.excluded[empNo];
   const opts = ['<option value="">-</option>']
     .concat(EVAL_GRADES.map(g => `<option value="${g.key}"${g.key === cur ? ' selected' : ''}>${g.key} ${g.label}</option>`))
     .join('');
@@ -1483,7 +1483,7 @@ function evalMultCell(empNo) {
   const cur = EVAL.mult[empNo];
   const val = cur === undefined || cur === null ? 0 : cur;
   return `<input class="eval-mult" type="number" min="0" max="9" step="1" inputmode="numeric"
-    value="${esc(val)}" data-input="setEvalMult" data-focusin="selectAll" data-keydown="evalNumKey" data-empno="${esc(empNo)}">`;
+    value="${esc(val)}" data-input="setEvalMult" data-focusin="selectAll" data-keydown="evalNumKey" data-empno="${esc(empNo)}"${anyConfirmed() ? ' disabled' : ''}>`;
 }
 
 // 표창갯수/배수횟수 입력칸: Enter/Tab → 같은 열 다음 행(아래), Shift+Tab → 이전 행(위)
@@ -1514,7 +1514,7 @@ function evalAwardCell(empNo) {
   const cur = EVAL.awards[empNo];
   const val = cur === undefined || cur === null ? 0 : cur;
   return `<input class="eval-mult eval-award" type="number" min="0" max="99" step="1" inputmode="numeric"
-    value="${esc(val)}" data-input="setEvalAward" data-focusin="selectAll" data-keydown="evalNumKey" data-empno="${esc(empNo)}">`;
+    value="${esc(val)}" data-input="setEvalAward" data-focusin="selectAll" data-keydown="evalNumKey" data-empno="${esc(empNo)}"${anyConfirmed() ? ' disabled' : ''}>`;
 }
 
 function setEvalAward(el) {
@@ -1544,7 +1544,7 @@ function renderEvalTable() {
       <td class="c eval-col-cohort" style="font-size:11px;color:#48484A">${esc(e.cohort || extractCohort(e.etc)) || '-'}</td>
       <td class="c eval-col-award">${evalAwardCell(e.empNo)}</td>
       <td class="c eval-col-mult">${evalMultCell(e.empNo)}</td>
-      <td class="c"><input type="checkbox" class="eval-excl" data-change="toggleEvalExclude" data-empno="${esc(e.empNo)}" ${EVAL.excluded[e.empNo] ? 'checked' : ''} title="평가 제외 여부"></td>
+      <td class="c"><input type="checkbox" class="eval-excl" data-change="toggleEvalExclude" data-empno="${esc(e.empNo)}" ${EVAL.excluded[e.empNo] ? 'checked' : ''} ${anyConfirmed() ? 'disabled' : ''} title="평가 제외 여부"></td>
       ${EVAL_PERIODS.map(p => evalCell(e.empNo, p.key)).join('')}
     </tr>`).join('');
 }
@@ -1591,7 +1591,7 @@ function setEvalGrade(el) {
   const prev = EVAL.data[empNo]?.[period] || '';
 
   // 확정된 기간은 수정 불가 (안전장치 — 평소엔 select가 disabled)
-  if (EVAL.confirmed[period]) { el.value = prev; el.className = evalSelClass(prev, period); return; }
+  if (anyConfirmed()) { el.value = prev; el.className = evalSelClass(prev, period); return; }
 
   // 기준(오늘) 반기 이후의 미래 기간은 등급 입력 불가 → 되돌리고 토스트 안내
   if (isLockedFuture(period)) {
@@ -1807,10 +1807,11 @@ function renderEvalComment() {
   const periods = EVAL_PERIODS.filter(p => !isLockedFuture(p.key)).reverse();
   document.getElementById('eval-cmt-body').innerHTML = periods.map(p => {
     const g = EVAL.data[cmtEmpNo]?.[p.key];
-    const locked = EVAL.confirmed[p.key];
+    const confirmed = !!EVAL.confirmed[p.key];
+    const locked = anyConfirmed();
     return `<div class="eval-cmt-row">
-      <div class="eval-cmt-head"><span>${esc(p.label)}</span>${g ? gtag(g) : ''}${locked ? '<span class="eval-cmt-lock">확정</span>' : ''}</div>
-      <textarea class="eval-cmt-area" data-period="${p.key}" rows="10" maxlength="4000" ${locked ? 'readonly' : ''} placeholder="종합평가의견 입력">${esc(recs[p.key] || '')}</textarea>
+      <div class="eval-cmt-head"><span>${esc(p.label)}</span>${g ? gtag(g) : ''}${confirmed ? '<span class="eval-cmt-lock">확정</span>' : ''}</div>
+      <textarea class="eval-cmt-area" data-period="${p.key}" rows="12" maxlength="4000" ${locked ? 'readonly' : ''} placeholder="종합평가의견 입력">${esc(recs[p.key] || '')}</textarea>
     </div>`;
   }).join('');
 }
@@ -2519,6 +2520,7 @@ const ACTIONS = {
   downloadTemplate: () => downloadTemplate(),
   exportCSV: () => exportCSV(),
   importCSV: el => importCSV(el),
+  printOrg: () => { const t = document.title; document.title = ''; window.print(); document.title = t; },
   openDetail: el => openDetail(el.dataset.empno),
   deleteEmployee: (el, ev) => deleteEmployee(el.dataset.empno, ev),
   openEdit: () => openEdit(),
