@@ -1095,10 +1095,10 @@ function renderOrg() {
   if (!host) return;
   const head = EMP.find(e => e.pos === '부장');
   const teams = sortedTeams(EMP);
-  const gradeRank = g => ({ L4: 4, L3: 3, L2: 2, L1: 1 }[String(g).replace(/대우$/, '')] || 0);
-  const rankTitle = e => { const t = e.title || e.pos; return t === '팀장' ? 0 : t === '전문직무직원' ? 2 : 1; };
+  const rankPos = e => e.title === '팀장' ? 0 : e.pos === '전문직무직원' ? 2 : 1;
+  const sortedEMP = sortEmpList(EMP);
   const orderMembers = list => list.slice().sort((a, b) =>
-    rankTitle(a) - rankTitle(b) || gradeRank(b.grade) - gradeRank(a.grade) || a.name.localeCompare(b.name, 'ko'));
+    rankPos(a) - rankPos(b) || sortedEMP.indexOf(a) - sortedEMP.indexOf(b));
 
   const card = (e, cls = '') => `<div class="org-card ${cls}" data-click="openDetail" data-empno="${esc(e.empNo)}" title="상세보기">
     ${av(e.name, 30)}
@@ -1114,8 +1114,8 @@ function renderOrg() {
   const cols = teams.map((t, i) => {
     const c = DASH_TEAM_COLORS[i % DASH_TEAM_COLORS.length];
     const members = orderMembers(EMP.filter(e => e.team === t && e !== head));
-    const lead = members.find(e => (e.title || e.pos) === '팀장');
-    const rest = members.filter(e => (e.title || e.pos) !== '팀장');
+    const lead = members.find(e => e.title === '팀장');
+    const rest = members.filter(e => e.title !== '팀장');
     return `<div class="org-col">
       <div class="org-team-name" style="background:${c}14;border-color:${c}59">${esc(t)}<span class="org-team-cnt" style="color:${c}">${members.length}</span></div>
       ${lead ? card(lead, 'org-lead') : ''}
